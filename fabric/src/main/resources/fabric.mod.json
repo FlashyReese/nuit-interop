@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "id": "nuit_interop",
+  "version": "${version}",
+  "name": "Nuit Interop",
+  "description": "Nuit Interoperability for MCPatcher/OptiFine Skies",
+  "authors": [
+    "FlashyReese"
+  ],
+  "contact": {},
+  "license": "MIT",
+  "icon": "assets/nuit_interop/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "modmenu": [
+      "me.flashyreese.mods.nuit_interop.fabric.config.ModMenuApiImpl"
+    ]
+  },
+  "custom": {
+    "modmenu": {
+      "parent": "nuit"
+    },
+    "links": {
+      "modmenu.curseforge": "https://curseforge.com/minecraft/mc-mods/fabricskyboxes-interop",
+      "modmenu.discord": "https://discord.gg/MPHVG6MH4e",
+      "modmenu.donate": "https://ko-fi.com/flashyreese",
+      "modmenu.github_releases": "https://github.com/FlashyReese/fabricskyboxes-interop/releases",
+      "modmenu.kofi": "https://ko-fi.com/flashyreese",
+      "modmenu.modrinth": "https://modrinth.com/mod/fabricskyboxes-interop"
+    }
+  },
+  "mixins": [
+    "nuit_interop.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.15.10",
+    "minecraft": "~1.20.6",
+    "java": ">=21",
+    "fabric-api": "*",
+    "nuit": ">=1.0.0"
+  }
+}

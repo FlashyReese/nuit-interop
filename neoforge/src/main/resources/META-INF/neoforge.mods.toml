@@ -1,0 +1,38 @@
+modLoader = "javafml"
+loaderVersion = "[2,)"
+#issueTrackerURL = ""
+license = "MIT"
+
+[[mods]]
+modId = "nuit_interop"
+version = "${version}"
+displayName = "Nuit Interop"
+authors = "FlashyReese"
+description = '''
+Nuit Interoperability for MCPatcher/OptiFine Skies
+'''
+logoFile = "assets/nuit_interop/icon.png"
+
+[[dependencies.nuit_interop]]
+modId = "neoforge"
+type = "required"
+versionRange = "[20.6.0,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.nuit_interop]]
+modId = "minecraft"
+type = "required"
+versionRange = "[1.20.6,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.nuit_interop]]
+modId = "nuit"
+type = "required"
+versionRange = "[1.0.0,)"
+ordering = "AFTER"
+side = "BOTH"
+
+[[mixins]]
+config = "nuit_interop.mixins.json"

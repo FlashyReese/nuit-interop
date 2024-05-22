@@ -1,114 +1,80 @@
 plugins {
-    id 'fabric-loom' version '1.6-SNAPSHOT'
-    id 'maven-publish'
+    id 'dev.architectury.loom' version '1.6-SNAPSHOT' apply false
+    id 'architectury-plugin' version '3.4-SNAPSHOT'
+    id 'com.github.johnrengelman.shadow' version '8.1.1' apply false
 }
 
-version = "${project.mod_version}+mc${project.minecraft_version}-${getVersionMetadata()}"
-group = project.maven_group
-
-sourceCompatibility = JavaVersion.VERSION_21
-targetCompatibility = JavaVersion.VERSION_21
-
-repositories {
-    maven {
-        name 'TerraformersMC'
-        url 'https://maven.terraformersmc.com'
-    }
-    maven {
-        url = "https://api.modrinth.com/maven"
-    }
-    maven {
-        url = "https://maven.flashyreese.me/releases"
-    }
-    maven {
-        url = "https://maven.flashyreese.me/snapshots"
-    }
+architectury {
+    minecraft = project.minecraft_version
 }
 
-dependencies {
-    // To change the versions see the gradle.properties file
-    minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
-    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-
-    // Fabric API. This is technically optional, but you probably want it anyway.
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
-
-    // FabricSkyBoxes
-    modImplementation("maven.modrinth:fabricskyboxes:mc1.20.5-0.7.4")
-    //modImplementation("io.github.amerebagatelle:fabricskyboxes:0.7.7+mc1.20.2")
-
-    // Mod Menu
-    modImplementation('com.terraformersmc:modmenu:10.0.0-beta.1') {
-        exclude group: 'net.fabricmc.fabric-api'
-    }
+allprojects {
+    group = rootProject.maven_group
+    version = rootProject.mod_version
 }
 
-processResources {
-    inputs.property "version", project.version
-    filteringCharset "UTF-8"
+subprojects {
+    apply plugin: 'dev.architectury.loom'
+    apply plugin: 'architectury-plugin'
+    apply plugin: 'maven-publish'
 
-    filesMatching("fabric.mod.json") {
-        expand "version": project.version
+    base {
+        // Set up a suffixed format for the mod jar names, e.g. `example-fabric`.
+        archivesName = "$rootProject.archives_name-$project.name"
     }
-}
 
-def targetJavaVersion = 21
-tasks.withType(JavaCompile).configureEach {
-    it.options.encoding = "UTF-8"
-    if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
-        it.options.release = targetJavaVersion
-    }
-}
-
-java {
-    def javaVersion = JavaVersion.toVersion(targetJavaVersion)
-    if (JavaVersion.current() < javaVersion) {
-        toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
-    }
-    archivesBaseName = project.archives_base_name
-    withSourcesJar()
-}
-
-jar {
-    from("LICENSE") {
-        rename { "${it}_${project.archivesBaseName}" }
-    }
-}
-
-publishing {
-    publications {
-        mavenJava(MavenPublication) {
-            from components.java
-        }
-    }
     repositories {
+        // Add repositories to retrieve artifacts from in here.
+        // You should only use this when depending on other mods because
+        // Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
+        // See https://docs.gradle.org/current/userguide/declaring_repositories.html
+        // for more information about repositories.
         maven {
-            name = "FlashyReeseReleases"
-            url = "https://maven.flashyreese.me/releases"
-            credentials {
-                username = System.getenv("MAVEN_USERNAME")
-                password = System.getenv("MAVEN_PASSWORD")
-            }
+            name = "Modrinth"
+            url = "https://api.modrinth.com/maven"
         }
         maven {
-            name = "FlashyReeseSnapshots"
-            url = "https://maven.flashyreese.me/snapshots"
-            credentials {
-                username = System.getenv("MAVEN_USERNAME")
-                password = System.getenv("MAVEN_PASSWORD")
-            }
+            url "https://maven.flashyreese.me/releases"
+        }
+        maven {
+            url "https://maven.flashyreese.me/snapshots"
         }
     }
-}
 
-static def getVersionMetadata() {
-    def build_id = System.getenv("GITHUB_RUN_NUMBER")
-
-    // CI builds only
-    if (build_id != null) {
-        return "build.${build_id}"
+    dependencies {
+        minecraft "net.minecraft:minecraft:$rootProject.minecraft_version"
+        mappings loom.officialMojangMappings()
     }
-    // No tracking information could be found about the build
-    return "unknown"
+
+    java {
+        // Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
+        // if it is present.
+        // If you remove this line, sources will not be generated.
+        withSourcesJar()
+
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        it.options.release = 21
+    }
+
+    // Configure Maven publishing.
+    publishing {
+        publications {
+            mavenJava(MavenPublication) {
+                artifactId = base.archivesName.get()
+                from components.java
+            }
+        }
+
+        // See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
+        repositories {
+            // Add repositories to publish to here.
+            // Notice: This block does NOT have the same function as the block in the top level.
+            // The repositories here will be used for publishing your artifact, not for
+            // retrieving dependencies.
+        }
+    }
 }
