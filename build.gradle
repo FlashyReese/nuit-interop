@@ -10,7 +10,7 @@ architectury {
 
 allprojects {
     group = rootProject.maven_group
-    version = rootProject.mod_version
+    version = createVersionString()
 }
 
 subprojects {
@@ -75,6 +75,48 @@ subprojects {
             // Notice: This block does NOT have the same function as the block in the top level.
             // The repositories here will be used for publishing your artifact, not for
             // retrieving dependencies.
+            maven {
+                name = "FlashyReeseReleases"
+                url = "https://maven.flashyreese.me/releases"
+                credentials {
+                    username = System.getenv("MAVEN_USERNAME")
+                    password = System.getenv("MAVEN_PASSWORD")
+                }
+            }
+            maven {
+                name = "FlashyReeseSnapshots"
+                url = "https://maven.flashyreese.me/snapshots"
+                credentials {
+                    username = System.getenv("MAVEN_USERNAME")
+                    password = System.getenv("MAVEN_PASSWORD")
+                }
+            }
         }
     }
+}
+
+def createVersionString() {
+    def builder = new StringBuilder()
+
+    def isReleaseBuild = project.hasProperty("build.release")
+    def buildId = System.getenv("GITHUB_RUN_NUMBER")
+
+    if (isReleaseBuild) {
+        builder.append(mod_version)
+    } else {
+        builder.append(mod_version.split('-')[0])
+        builder.append("-snapshot")
+    }
+
+    builder.append("+mc").append(minecraft_version)
+
+    if (!isReleaseBuild) {
+        if (buildId != null) {
+            builder.append("-build.${buildId}")
+        } else {
+            builder.append("-local")
+        }
+    }
+
+    return builder.toString()
 }

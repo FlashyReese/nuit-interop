@@ -7,7 +7,7 @@ pluginManagement {
     }
 }
 
-rootProject.name = 'nuit_interop'
+rootProject.name = 'nuit-interop'
 
 include 'common'
 include 'fabric'
