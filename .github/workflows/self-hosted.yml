@@ -18,7 +18,7 @@ jobs:
           distribution: 'temurin'
           java-version: 21
           check-latest: true
-      - name: Build adn Publish with Gradle
+      - name: Build and Publish with Gradle
         run: ./gradlew build publishAllPublicationsToFlashyReeseSnapshotsRepository
         env:
           MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}

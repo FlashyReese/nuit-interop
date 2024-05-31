@@ -4,7 +4,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import io.github.amerebagatelle.mods.nuit.skybox.MinMaxEntry;
+import io.github.amerebagatelle.mods.nuit.components.MinMaxEntry;
 import io.github.amerebagatelle.mods.nuit.util.CodecUtils;
 
 import java.util.Collection;

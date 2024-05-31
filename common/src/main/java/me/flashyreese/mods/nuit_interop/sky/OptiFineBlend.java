@@ -74,16 +74,16 @@ public enum OptiFineBlend {
         this.blendFunc = blendFunc;
     }
 
+    public static OptiFineBlend fromString(String name) {
+        return Objects.requireNonNull(VALUES.get(name));
+    }
+
     public String getName() {
         return name;
     }
 
     public Consumer<Float> getBlendFunc() {
         return blendFunc;
-    }
-
-    public static OptiFineBlend fromString(String name) {
-        return Objects.requireNonNull(VALUES.get(name));
     }
 
     @Override

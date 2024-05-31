@@ -2,7 +2,7 @@ package me.flashyreese.mods.nuit_interop.utils;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import io.github.amerebagatelle.mods.nuit.skybox.MinMaxEntry;
+import io.github.amerebagatelle.mods.nuit.components.MinMaxEntry;
 import net.minecraft.ResourceLocationException;
 import net.minecraft.resources.ResourceLocation;
 
@@ -102,8 +102,9 @@ public final class Utils {
         // Biomes
         if (properties.containsKey("biomes")) {
             String biomesString = properties.getProperty("biomes");
+            JsonObject biomeObject = new JsonObject();
             if (biomesString.startsWith("!")) {
-                jsonObject.addProperty("biomeInclusion", false);
+                biomeObject.addProperty("excludes", true);
                 biomesString = biomesString.substring(1);
             }
 
@@ -113,7 +114,8 @@ public final class Utils {
                 for (String biome : biomes) {
                     jsonBiomes.add(biome);
                 }
-                jsonObject.add("biomes", jsonBiomes);
+                biomeObject.add("entries", jsonBiomes);
+                jsonObject.add("biomes", biomeObject);
             }
         }
 

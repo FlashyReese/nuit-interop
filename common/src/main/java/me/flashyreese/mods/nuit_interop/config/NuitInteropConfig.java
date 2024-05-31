@@ -22,7 +22,6 @@ public class NuitInteropConfig {
             .create();
 
     public static final NuitInteropConfig INSTANCE = NuitInteropConfig.load(Minecraft.getInstance().gameDirectory.toPath().resolve("config").resolve("nuit-interop.json").toFile());
-    public NuitInteropMode mode = NuitInteropMode.NATIVE;
     public boolean interoperability = true;
     public boolean debugMode = true;
     public boolean preferNuitNative = true;

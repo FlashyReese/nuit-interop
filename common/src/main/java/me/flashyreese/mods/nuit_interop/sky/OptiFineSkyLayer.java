@@ -7,8 +7,9 @@ import com.mojang.math.Axis;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import io.github.amerebagatelle.mods.nuit.skybox.MinMaxEntry;
-import io.github.amerebagatelle.mods.nuit.skybox.Weather;
+import io.github.amerebagatelle.mods.nuit.components.Condition;
+import io.github.amerebagatelle.mods.nuit.components.MinMaxEntry;
+import io.github.amerebagatelle.mods.nuit.components.Weather;
 import io.github.amerebagatelle.mods.nuit.util.Utils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
@@ -38,8 +39,7 @@ public class OptiFineSkyLayer {
 
     public static final Codec<OptiFineSkyLayer> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ResourceLocation.CODEC.fieldOf("source").forGetter(OptiFineSkyLayer::getSource),
-            Codec.BOOL.optionalFieldOf("biomeInclusion", true).forGetter(OptiFineSkyLayer::isBiomeInclusion),
-            ResourceLocation.CODEC.listOf().optionalFieldOf("biomes", ImmutableList.of()).forGetter(OptiFineSkyLayer::getBiomes),
+            Condition.create(ResourceLocation.CODEC).optionalFieldOf("biomes", Condition.of()).forGetter(OptiFineSkyLayer::getBiomes),
             MinMaxEntry.CODEC.listOf().optionalFieldOf("heights", ImmutableList.of()).forGetter(OptiFineSkyLayer::getHeights),
             OptiFineBlend.CODEC.optionalFieldOf("blend", OptiFineBlend.ADD).forGetter(OptiFineSkyLayer::getBlend),
             LegacyFade.CODEC.optionalFieldOf("fade", OPTIFINE_FADE).forGetter(OptiFineSkyLayer::getFade),
@@ -52,8 +52,7 @@ public class OptiFineSkyLayer {
     ).apply(instance, OptiFineSkyLayer::new));
 
     private final ResourceLocation source;
-    private final boolean biomeInclusion;
-    private final List<ResourceLocation> biomes;
+    private final Condition<ResourceLocation> biomes;
     private final List<MinMaxEntry> heights;
     private final OptiFineBlend blend;
     private final LegacyFade fade;
@@ -65,9 +64,8 @@ public class OptiFineSkyLayer {
     private final List<Weather> weathers;
     public float conditionAlpha = -1;
 
-    public OptiFineSkyLayer(ResourceLocation source, boolean biomeInclusion, List<ResourceLocation> biomes, List<MinMaxEntry> heights, OptiFineBlend blend, LegacyFade fade, boolean rotate, float speed, Vector3f axis, Loop loop, float transition, List<Weather> weathers) {
+    public OptiFineSkyLayer(ResourceLocation source, Condition<ResourceLocation> biomes, List<MinMaxEntry> heights, OptiFineBlend blend, LegacyFade fade, boolean rotate, float speed, Vector3f axis, Loop loop, float transition, List<Weather> weathers) {
         this.source = source;
-        this.biomeInclusion = biomeInclusion;
         this.biomes = biomes;
         this.heights = heights;
         this.blend = blend;
@@ -166,23 +164,19 @@ public class OptiFineSkyLayer {
 
         BlockPos entityPos = cameraEntity.blockPosition();
 
-        if (!this.biomes.isEmpty()) {
+        if (!this.biomes.getEntries().isEmpty()) {
             Biome currentBiome = world.getBiome(entityPos).value();
 
-            if (currentBiome == null) {
-                return false;
-            }
-
-            if (!(this.biomeInclusion && this.biomes.contains(world.registryAccess().registryOrThrow(Registries.BIOME).getKey(currentBiome)))) {
+            if (this.biomes.isExcludes() == this.biomes.getEntries().contains(world.registryAccess().registryOrThrow(Registries.BIOME).getKey(currentBiome))) {
                 return false;
             }
         }
 
-        return this.heights == null || Utils.checkRanges(entityPos.getY(), this.heights);
+        return this.heights == null || Utils.checkRanges(entityPos.getY(), this.heights, false);
     }
 
     private float getPositionBrightness(Level world) {
-        if (this.biomes.isEmpty() && this.heights.isEmpty()) {
+        if (this.biomes.getEntries().isEmpty() && this.heights.isEmpty()) {
             return 1.0F;
         }
 
@@ -236,7 +230,7 @@ public class OptiFineSkyLayer {
                 int daysPassed = (int) (adjustedTime / 24000L);
                 int currentDay = daysPassed % (int) this.loop.getDays();
 
-                return Utils.checkRanges(currentDay, this.loop.getRanges());
+                return Utils.checkRanges(currentDay, this.loop.getRanges(), false);
             }
 
             return true;
@@ -247,11 +241,7 @@ public class OptiFineSkyLayer {
         return source;
     }
 
-    public boolean isBiomeInclusion() {
-        return biomeInclusion;
-    }
-
-    public List<ResourceLocation> getBiomes() {
+    public Condition<ResourceLocation> getBiomes() {
         return biomes;
     }
 

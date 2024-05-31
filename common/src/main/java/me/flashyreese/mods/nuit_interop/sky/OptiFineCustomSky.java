@@ -101,9 +101,9 @@ public class OptiFineCustomSky implements Skybox {
                     this.renderEndSky(matrices);
                 } else if (this.client.level.effects().skyType() == DimensionSpecialEffects.SkyType.NORMAL) {
                     Vec3 vec3d = this.world.getSkyColor(this.client.gameRenderer.getMainCamera().getPosition(), tickDelta);
-                    float f = (float)vec3d.x;
-                    float g = (float)vec3d.y;
-                    float h = (float)vec3d.z;
+                    float f = (float) vec3d.x;
+                    float g = (float) vec3d.y;
+                    float h = (float) vec3d.z;
                     FogRenderer.levelFogColor();
                     BufferBuilder bufferBuilder = Tesselator.getInstance().getBuilder();
                     RenderSystem.depthMask(false);
@@ -130,8 +130,8 @@ public class OptiFineCustomSky implements Skybox {
                         bufferBuilder.vertex(matrix4f, 0.0F, 100.0F, 0.0F).color(j, k, l, fs[3]).endVertex();
                         int m = 16;
 
-                        for(int n = 0; n <= 16; ++n) {
-                            float o = (float)n * (float) (Math.PI * 2) / 16.0F;
+                        for (int n = 0; n <= 16; ++n) {
+                            float o = (float) n * (float) (Math.PI * 2) / 16.0F;
                             float p = Mth.sin(o);
                             float q = Mth.cos(o);
                             bufferBuilder.vertex(matrix4f, p * 120.0F, q * 120.0F, -q * 40.0F * fs[3]).color(fs[0], fs[1], fs[2], 0.0F).endVertex();
@@ -165,10 +165,10 @@ public class OptiFineCustomSky implements Skybox {
                     int r = this.world.getMoonPhase();
                     int s = r % 4;
                     int m = r / 4 % 2;
-                    float t = (float)(s + 0) / 4.0F;
-                    float o = (float)(m + 0) / 2.0F;
-                    float p = (float)(s + 1) / 4.0F;
-                    float q = (float)(m + 1) / 2.0F;
+                    float t = (float) (s + 0) / 4.0F;
+                    float o = (float) (m + 0) / 2.0F;
+                    float p = (float) (s + 1) / 4.0F;
+                    float q = (float) (m + 1) / 2.0F;
                     bufferBuilder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
                     bufferBuilder.vertex(matrix4f2, -k, -100.0F, k).uv(p, q).endVertex();
                     bufferBuilder.vertex(matrix4f2, k, -100.0F, k).uv(t, q).endVertex();
