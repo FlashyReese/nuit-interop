@@ -5,7 +5,12 @@
   "name": "Nuit Interop",
   "description": "Nuit Interoperability for MCPatcher/OptiFine Skies",
   "authors": [
-    "FlashyReese"
+    {
+      "name": "FlashyReese",
+      "contact": {
+        "homepage": "https://flashyreese.me"
+      }
+    }
   ],
   "contact": {},
   "license": "MIT",
@@ -22,7 +27,7 @@
     },
     "links": {
       "modmenu.curseforge": "https://curseforge.com/minecraft/mc-mods/fabricskyboxes-interop",
-      "modmenu.discord": "https://discord.gg/MPHVG6MH4e",
+      "modmenu.discord": "https://flashyreese.me/discord",
       "modmenu.donate": "https://ko-fi.com/flashyreese",
       "modmenu.github_releases": "https://github.com/FlashyReese/fabricskyboxes-interop/releases",
       "modmenu.kofi": "https://ko-fi.com/flashyreese",
