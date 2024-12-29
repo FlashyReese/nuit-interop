@@ -7,10 +7,10 @@ import com.mojang.math.Axis;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import io.github.amerebagatelle.mods.nuit.components.Fade;
 import io.github.amerebagatelle.mods.nuit.components.MinMaxEntry;
 import io.github.amerebagatelle.mods.nuit.components.Weather;
 import io.github.amerebagatelle.mods.nuit.util.Utils;
+import me.flashyreese.mods.nuit_interop.utils.LegacyFade;
 import me.flashyreese.mods.nuit_interop.utils.Loop;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.CoreShaders;
@@ -27,7 +27,6 @@ import org.joml.Vector3f;
 import org.joml.Vector4f;
 
 import java.util.List;
-import java.util.Map;
 
 public class OptiFineSkyLayer {
     private static final Codec<Vector3f> VEC_3_F = Codec.FLOAT.listOf().comapFlatMap((list) -> {
@@ -38,7 +37,7 @@ public class OptiFineSkyLayer {
         }
     }, (vec) -> ImmutableList.of(vec.x(), vec.y(), vec.z()));
 
-    private static final Fade OPTIFINE_FADE = new Fade(true, 0, Map.of());
+    private static final LegacyFade OPTIFINE_FADE = new LegacyFade(0, 0, 0, 0, true);
 
     public static final Codec<OptiFineSkyLayer> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ResourceLocation.CODEC.fieldOf("source").forGetter(OptiFineSkyLayer::getSource),
@@ -46,7 +45,7 @@ public class OptiFineSkyLayer {
             ResourceLocation.CODEC.listOf().optionalFieldOf("biomes", ImmutableList.of()).forGetter(OptiFineSkyLayer::getBiomes),
             MinMaxEntry.CODEC.listOf().optionalFieldOf("heights", ImmutableList.of()).forGetter(OptiFineSkyLayer::getHeights),
             OptiFineBlend.CODEC.optionalFieldOf("blend", OptiFineBlend.ADD).forGetter(OptiFineSkyLayer::getBlend),
-            Fade.CODEC.optionalFieldOf("fade", OPTIFINE_FADE).forGetter(OptiFineSkyLayer::getFade),
+            LegacyFade.CODEC.optionalFieldOf("fade", OPTIFINE_FADE).forGetter(OptiFineSkyLayer::getFade),
             Codec.BOOL.optionalFieldOf("rotate", false).forGetter(OptiFineSkyLayer::isRotate),
             Codec.FLOAT.optionalFieldOf("speed", 1.0F).forGetter(OptiFineSkyLayer::getSpeed),
             VEC_3_F.optionalFieldOf("axis", new Vector3f(1, 0, 0)).forGetter(OptiFineSkyLayer::getAxis),
@@ -60,7 +59,7 @@ public class OptiFineSkyLayer {
     private final List<ResourceLocation> biomes;
     private final List<MinMaxEntry> heights;
     private final OptiFineBlend blend;
-    private final Fade fade;
+    private final LegacyFade fade;
     private final boolean rotate;
     private final float speed;
     private final Vector3f axis;
@@ -69,7 +68,7 @@ public class OptiFineSkyLayer {
     private final List<Weather> weathers;
     public float conditionAlpha = -1;
 
-    public OptiFineSkyLayer(ResourceLocation source, boolean biomeInclusion, List<ResourceLocation> biomes, List<MinMaxEntry> heights, OptiFineBlend blend, Fade fade, boolean rotate, float speed, Vector3f axis, Loop loop, float transition, List<Weather> weathers) {
+    public OptiFineSkyLayer(ResourceLocation source, boolean biomeInclusion, List<ResourceLocation> biomes, List<MinMaxEntry> heights, OptiFineBlend blend, LegacyFade fade, boolean rotate, float speed, Vector3f axis, Loop loop, float transition, List<Weather> weathers) {
         this.source = source;
         this.biomeInclusion = biomeInclusion;
         this.biomes = biomes;
@@ -217,19 +216,18 @@ public class OptiFineSkyLayer {
 
     private float getFadeAlpha(int timeOfDay) {
         if (!this.fade.alwaysOn()) {
-            return this.conditionAlpha; // TODO/NOTE: idk if conditionAlpha is the actual value we want
-            // TODO: Utils.calculateFadeAlphaValue(1.0F, 0.0F, timeOfDay, this.fade.getStartFadeIn(), this.fade.getEndFadeIn(), this.fade.getStartFadeOut(), this.fade.getEndFadeOut());
+            return Utils.calculateFadeAlphaValue(1.0F, 0.0F, timeOfDay, this.fade.startFadeIn(), this.fade.endFadeIn(), this.fade.startFadeOut(), this.fade.endFadeOut());
         } else {
             return 1.0F;
         }
     }
 
     public boolean isActive(int timeOfDay) {
-        if (!this.fade.alwaysOn()) { // TODO: && Utils.isInTimeInterval(timeOfDay, this.fade.getEndFadeOut(), this.fade.getStartFadeIn())) {
+        if (!this.fade.alwaysOn() && Utils.isInTimeInterval(timeOfDay, this.fade.endFadeOut(), this.fade.startFadeIn())) {
             return false;
         } else {
             if (this.loop.getRanges() != null) {
-                long adjustedTime = timeOfDay - 0L; // TODO: (long) this.fade.getStartFadeIn();
+                long adjustedTime = timeOfDay - (long) this.fade.startFadeIn();
                 // Ensure adjustedTime is a non-negative value in the range of days
                 while (adjustedTime < 0L) {
                     adjustedTime += 24000L * (int) this.loop.getDays();
@@ -264,7 +262,7 @@ public class OptiFineSkyLayer {
         return blend;
     }
 
-    public Fade getFade() {
+    public LegacyFade getFade() {
         return fade;
     }
 
