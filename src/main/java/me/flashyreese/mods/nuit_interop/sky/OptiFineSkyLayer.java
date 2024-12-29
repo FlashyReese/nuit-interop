@@ -15,6 +15,7 @@ import me.flashyreese.mods.nuit_interop.utils.Loop;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.CoreShaders;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
@@ -169,17 +170,17 @@ public class OptiFineSkyLayer {
 
         BlockPos entityPos = cameraEntity.getOnPos();
         if (!this.biomes.isEmpty()) {
-            Biome currentBiome = level.getBiome(entityPos).value();
-            if (currentBiome == null) {
+            Holder<Biome> currentBiome = level.getBiome(entityPos);
+            if (!currentBiome.isBound()) {
                 return false;
             }
 
-            if (!(this.biomeInclusion && this.biomes.contains(level.registryAccess().lookupOrThrow(Registries.BIOME).getId(currentBiome)))) {
+            if (!(this.biomeInclusion && this.biomes.contains(level.registryAccess().lookupOrThrow(Registries.BIOME).getId(currentBiome.value())))) {
                 return false;
             }
         }
 
-        return this.heights == null || Utils.checkRanges(entityPos.getY(), this.heights, false /* TODO: inverse? */);
+        return this.heights == null || Utils.checkRanges(entityPos.getY(), this.heights, false);
     }
 
     private float getPositionBrightness(Level world) {
@@ -235,7 +236,7 @@ public class OptiFineSkyLayer {
 
                 int daysPassed = (int) (adjustedTime / 24000L);
                 int currentDay = daysPassed % (int) this.loop.days();
-                return Utils.checkRanges(currentDay, this.loop.ranges(), false /* TODO: inverse? */);
+                return Utils.checkRanges(currentDay, this.loop.ranges(), false);
             }
 
             return true;
