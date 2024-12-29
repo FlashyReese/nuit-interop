@@ -1,4 +1,4 @@
-package me.flashyreese.mods.fabricskyboxes_interop.client.config;
+package me.flashyreese.mods.nuit_interop.client.config;
 
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
@@ -13,35 +13,35 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Modifier;
 
-public class FSBInteropConfig {
-    private static final Logger logger = LoggerFactory.getLogger("FSB-Interop Config");
+public class NuitInteropConfig {
+    private static final Logger logger = LoggerFactory.getLogger("Nuit-Interop Config");
     private static final Gson GSON = new GsonBuilder()
             .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES)
             .setPrettyPrinting()
             .excludeFieldsWithModifiers(Modifier.PRIVATE)
             .create();
 
-    public static final FSBInteropConfig INSTANCE = FSBInteropConfig.load(FabricLoader.getInstance().getConfigDir().resolve("fsb-interop.json").toFile());
-    public FSBInteropMode mode = FSBInteropMode.NATIVE;
+    public static final NuitInteropConfig INSTANCE = NuitInteropConfig.load(FabricLoader.getInstance().getConfigDir().resolve("nuit-interop.json").toFile());
+    public NuitInteropMode mode = NuitInteropMode.NATIVE;
     public boolean interoperability = true;
     public boolean debugMode = true;
-    public boolean preferFSBNative = true;
+    public boolean preferNuitNative = true;
     public boolean processOptiFine = true;
     public boolean processMCPatcher = false;
     private File file;
 
-    public static FSBInteropConfig load(File file) {
-        FSBInteropConfig config;
+    public static NuitInteropConfig load(File file) {
+        NuitInteropConfig config;
 
         if (file.exists()) {
             try (FileReader reader = new FileReader(file)) {
-                config = GSON.fromJson(reader, FSBInteropConfig.class);
+                config = GSON.fromJson(reader, NuitInteropConfig.class);
             } catch (Exception e) {
                 logger.error("Could not parse config, falling back to defaults!", e);
-                config = new FSBInteropConfig();
+                config = new NuitInteropConfig();
             }
         } else {
-            config = new FSBInteropConfig();
+            config = new NuitInteropConfig();
         }
 
         config.file = file;

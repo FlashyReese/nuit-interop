@@ -1,13 +1,12 @@
-package me.flashyreese.mods.fabricskyboxes_interop.client.config;
+package me.flashyreese.mods.nuit_interop.client.config;
 
-public enum FSBInteropMode {
+public enum NuitInteropMode {
     CONVERSION("mode.conversion"),
     NATIVE("mode.native");
 
-
     private final String translationKey;
 
-    FSBInteropMode(String translationKey) {
+    NuitInteropMode(String translationKey) {
         this.translationKey = translationKey;
     }
 

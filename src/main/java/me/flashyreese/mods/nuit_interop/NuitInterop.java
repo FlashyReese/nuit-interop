@@ -1,23 +1,23 @@
-package me.flashyreese.mods.fabricskyboxes_interop;
+package me.flashyreese.mods.nuit_interop;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.mojang.serialization.JsonOps;
-import io.github.amerebagatelle.fabricskyboxes.SkyboxManager;
-import io.github.amerebagatelle.fabricskyboxes.api.skyboxes.Skybox;
-import io.github.amerebagatelle.fabricskyboxes.util.object.MinMaxEntry;
-import me.flashyreese.mods.fabricskyboxes_interop.client.config.FSBInteropConfig;
-import me.flashyreese.mods.fabricskyboxes_interop.client.config.FSBInteropMode;
-import me.flashyreese.mods.fabricskyboxes_interop.mixin.SkyboxManagerAccessor;
-import me.flashyreese.mods.fabricskyboxes_interop.sky.OptiFineCustomSky;
-import me.flashyreese.mods.fabricskyboxes_interop.utils.BlenderUtil;
-import me.flashyreese.mods.fabricskyboxes_interop.utils.ResourceManagerHelper;
-import me.flashyreese.mods.fabricskyboxes_interop.utils.Utils;
-import net.minecraft.resource.ResourceManager;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.InvalidIdentifierException;
+import io.github.amerebagatelle.mods.nuit.SkyboxManager;
+import io.github.amerebagatelle.mods.nuit.api.skyboxes.Skybox;
+import io.github.amerebagatelle.mods.nuit.components.MinMaxEntry;
+import me.flashyreese.mods.nuit_interop.client.config.NuitInteropConfig;
+import me.flashyreese.mods.nuit_interop.client.config.NuitInteropMode;
+import me.flashyreese.mods.nuit_interop.mixin.SkyboxManagerAccessor;
+import me.flashyreese.mods.nuit_interop.sky.OptiFineCustomSky;
+import me.flashyreese.mods.nuit_interop.utils.BlenderUtil;
+import me.flashyreese.mods.nuit_interop.utils.ResourceManagerHelper;
+import me.flashyreese.mods.nuit_interop.utils.Utils;
+import net.minecraft.ResourceLocationException;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.ResourceManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,40 +28,42 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class FSBInterop {
+public class NuitInterop {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final String OPTIFINE_SKY_PARENT = "optifine/sky";
     private static final Pattern OPTIFINE_SKY_PATTERN = Pattern.compile("optifine/sky/(?<world>\\w+)/(?<name>\\w+).properties$");
     private static final String MCPATCHER_SKY_PARENT = "mcpatcher/sky";
     private static final Pattern MCPATCHER_SKY_PATTERN = Pattern.compile("mcpatcher/sky/(?<world>\\w+)/(?<name>\\w+).properties$");
-    private static FSBInterop INSTANCE;
-    private final Map<Identifier, String> convertedSkyMap = new HashMap<>();
-    private final Logger logger = LoggerFactory.getLogger("FSB-Interop");
+    private static NuitInterop INSTANCE;
+    private final Map<ResourceLocation, String> convertedSkyMap = new HashMap<>();
+    private final Logger logger = LoggerFactory.getLogger("Nuit-Interop");
 
-    public static FSBInterop getInstance() {
+    public static NuitInterop getInstance() {
         if (INSTANCE == null) {
-            INSTANCE = new FSBInterop();
+            INSTANCE = new NuitInterop();
         }
+
         return INSTANCE;
     }
 
-    public Map<Identifier, String> getConvertedSkyMap() {
+    public Map<ResourceLocation, String> getConvertedSkyMap() {
         return convertedSkyMap;
     }
 
     public void inject(ResourceManager manager) {
         this.convertedSkyMap.clear();
-        if (FSBInteropConfig.INSTANCE.interoperability) {
-            if (FSBInteropConfig.INSTANCE.preferFSBNative) {
+        if (NuitInteropConfig.INSTANCE.interoperability) {
+            if (NuitInteropConfig.INSTANCE.preferNuitNative) {
                 if (!((SkyboxManagerAccessor) SkyboxManager.getInstance()).getSkyboxes().isEmpty()) {
-                    this.logger.info("FSB Native is preferred and existing skyboxes already detected! No longer converting MCP/OptiFine formats!");
+                    this.logger.info("Nuit Native is preferred and existing skyboxes already detected! No longer converting MCP/OptiFine formats!");
                     return;
                 }
             } else {
-                this.logger.warn("FSB-Interop is preventing native FabricSkyBoxes resource packs from loading!");
+                this.logger.warn("Nuit-Interop is preventing native Nuit resource packs from loading!");
             }
-            this.logger.warn("Removing existing FSB skies...");
-            this.logger.warn("FSB-Interop is converting MCPatcher/OptiFine custom skies resource packs! Any visual bugs are likely caused by FSB-Interop. Please do not report these issues to FabricSkyBoxes nor Resource Pack creators!");
+
+            this.logger.warn("Removing existing Nuit skies...");
+            this.logger.warn("Nuit-Interop is converting MCPatcher/OptiFine custom skies resource packs! Any visual bugs are likely caused by Nuit-Interop. Please do not report these issues to Nuit nor Resource Pack creators!");
             SkyboxManager.getInstance().clearSkyboxes();
             this.logger.info("Looking for OptiFine/MCPatcher Skies...");
             this.convert(new ResourceManagerHelper(manager));
@@ -69,11 +71,13 @@ public class FSBInterop {
     }
 
     public void convert(ResourceManagerHelper managerAccessor) {
-        if (FSBInteropConfig.INSTANCE.processOptiFine)
+        if (NuitInteropConfig.INSTANCE.processOptiFine) {
             this.convertNamespace(managerAccessor, OPTIFINE_SKY_PARENT, OPTIFINE_SKY_PATTERN);
+        }
 
-        if (FSBInteropConfig.INSTANCE.processMCPatcher)
+        if (NuitInteropConfig.INSTANCE.processMCPatcher) {
             this.convertNamespace(managerAccessor, MCPATCHER_SKY_PARENT, MCPATCHER_SKY_PATTERN);
+        }
     }
 
     /**
@@ -90,8 +94,8 @@ public class FSBInterop {
         final JsonArray endLayers = new JsonArray();
         resourceManagerHelper.searchIn(skyParent)
                 .filter(id -> id.getPath().endsWith(".properties"))
-                .sorted(Comparator.comparing(Identifier::getPath, (id1, id2) -> {
-                    // Sorting for older versions of FSB without priority
+                .sorted(Comparator.comparing(ResourceLocation::getPath, (id1, id2) -> {
+                    // Sorting for older versions of Nuit without priority
                     Matcher matcherId1 = pattern.matcher(id1);
                     Matcher matcherId2 = pattern.matcher(id2);
                     if (matcherId1.find() && matcherId2.find()) {
@@ -108,22 +112,23 @@ public class FSBInterop {
                     if (matcher.find()) {
                         String world = matcher.group("world");
                         String name = matcher.group("name");
-
-                        if (world == null || name == null)
+                        if (world == null || name == null) {
                             return;
+                        }
 
                         if (name.equals("moon_phases") || name.equals("sun")) {
                             this.logger.info("Skipping {}, moon_phases/sun aren't supported!", id);
                             return;
                         }
 
-                        this.logger.info("Converting {} to FSB Format...", id);
+                        this.logger.info("Converting {} to Nuit Format...", id);
 
                         InputStream inputStream = resourceManagerHelper.getInputStream(id);
                         if (inputStream == null) {
-                            if (FSBInteropConfig.INSTANCE.debugMode) {
+                            if (NuitInteropConfig.INSTANCE.debugMode) {
                                 this.logger.error("Error trying to read namespaced identifier: {}", id);
                             }
+
                             return;
                         }
 
@@ -131,21 +136,22 @@ public class FSBInterop {
                         try {
                             properties.load(inputStream);
                         } catch (IOException e) {
-                            if (FSBInteropConfig.INSTANCE.debugMode) {
+                            if (NuitInteropConfig.INSTANCE.debugMode) {
                                 this.logger.error("Error trying to read namespaced identifier: {}", id);
                             }
+
                             return;
                         } finally {
                             try {
                                 inputStream.close();
                             } catch (IOException e) {
-                                if (FSBInteropConfig.INSTANCE.debugMode) {
+                                if (NuitInteropConfig.INSTANCE.debugMode) {
                                     this.logger.error("Error trying to close input stream at namespaced identifier: {}", id);
                                 }
                             }
                         }
 
-                        if (FSBInteropConfig.INSTANCE.mode == FSBInteropMode.CONVERSION) {
+                        if (NuitInteropConfig.INSTANCE.mode == NuitInteropMode.CONVERSION) {
                             if (!hasGeneratedOverworldSky.get() && world.equals("world0")) {
                                 this.generateSky("minecraft:overworld", "overworld");
                                 this.generateOverworldDecorations();
@@ -158,7 +164,7 @@ public class FSBInterop {
                             }
 
                             this.convert(resourceManagerHelper, skyParent, name, id, properties, world);
-                        } else if (FSBInteropConfig.INSTANCE.mode == FSBInteropMode.NATIVE) {
+                        } else if (NuitInteropConfig.INSTANCE.mode == NuitInteropMode.NATIVE) {
                             JsonObject json = Utils.convertOptiFineSkyProperties(resourceManagerHelper, properties, id);
                             if (json != null) {
                                 if (world.equals("world0")) {
@@ -172,7 +178,7 @@ public class FSBInterop {
                     }
                 });
 
-        if (FSBInteropConfig.INSTANCE.mode == FSBInteropMode.NATIVE) {
+        if (NuitInteropConfig.INSTANCE.mode == NuitInteropMode.NATIVE) {
             if (!overworldLayers.isEmpty()) {
                 JsonObject overworldJson = new JsonObject();
                 overworldJson.addProperty("schemaVersion", 2);
@@ -181,8 +187,7 @@ public class FSBInterop {
                 overworldJson.addProperty("world", "minecraft:overworld");
 
                 Skybox skybox = OptiFineCustomSky.CODEC.decode(JsonOps.INSTANCE, overworldJson).getOrThrow().getFirst();
-
-                SkyboxManager.getInstance().addSkybox(Identifier.of("fsb-interop", "native-optifine-custom-sky-overworld"), skybox);
+                SkyboxManager.getInstance().addSkybox(ResourceLocation.fromNamespaceAndPath("nuit-interop", "native-optifine-custom-sky-overworld"), skybox);
             }
 
             if (!endLayers.isEmpty()) {
@@ -193,20 +198,19 @@ public class FSBInterop {
                 endJson.addProperty("world", "minecraft:the_end");
 
                 Skybox skybox = OptiFineCustomSky.CODEC.decode(JsonOps.INSTANCE, endJson).getOrThrow().getFirst();
-
-                SkyboxManager.getInstance().addSkybox(Identifier.of("fsb-interop", "native-optifine-custom-sky-end"), skybox);
+                SkyboxManager.getInstance().addSkybox(ResourceLocation.fromNamespaceAndPath("nuit-interop", "native-optifine-custom-sky-end"), skybox);
             }
         }
     }
 
     /**
-     * Converts one MCPatcher file to FSB format.
+     * Converts one MCPatcher file to Nuit format.
      *
      * @param propertiesId The OptiFine metadata file identifier.
      * @param properties   The MCPatcher properties file.
      * @param world        The world name
      */
-    private void convert(ResourceManagerHelper resourceManagerHelper, String skyParent, String skyName, Identifier propertiesId, Properties properties, String world) {
+    private void convert(ResourceManagerHelper resourceManagerHelper, String skyParent, String skyName, ResourceLocation propertiesId, Properties properties, String world) {
         // Blend
         JsonObject blend = new JsonObject();
         String blendType = properties.getProperty("blend", "add");
@@ -214,8 +218,7 @@ public class FSBInterop {
         //blend.addProperty("type", blendType);
         blend.add("blender", GSON.toJsonTree(BlenderUtil.getInstance().BLEND_MAP.getOrDefault(blendType, BlenderUtil.getInstance().BLEND_MAP.get("add"))).getAsJsonObject());
 
-        // Texture Identifier
-        Identifier textureId;
+        ResourceLocation textureId;
         String source = properties.getProperty("source");
         String namespace;
         String path;
@@ -232,10 +235,10 @@ public class FSBInterop {
                     namespace = parts[1];
                     path = parts[2];
                 } else {
-                    Identifier sourceIdentifier = Identifier.tryParse(source);
-                    if (sourceIdentifier != null) {
-                        namespace = sourceIdentifier.getNamespace();
-                        path = sourceIdentifier.getPath();
+                    ResourceLocation sourceResourceLocation = ResourceLocation.tryParse(source);
+                    if (sourceResourceLocation != null) {
+                        namespace = sourceResourceLocation.getNamespace();
+                        path = sourceResourceLocation.getPath();
                     } else {
                         this.logger.error("Invalid source format: {}", source);
                         return;
@@ -244,8 +247,8 @@ public class FSBInterop {
             }
         }
         try {
-            textureId = Identifier.of(namespace, path);
-        } catch (InvalidIdentifierException e) {
+            textureId = ResourceLocation.fromNamespaceAndPath(namespace, path);
+        } catch (ResourceLocationException e) {
             this.logger.error("Illegal character in namespaced identifier: {}", source);
             return;
         }
@@ -272,7 +275,7 @@ public class FSBInterop {
         json.add("properties", propertiesObject);
         json.add("conditions", conditionsObject);
 
-        if (FSBInteropConfig.INSTANCE.debugMode) {
+        if (NuitInteropConfig.INSTANCE.debugMode) {
             this.logger.info("Output for {} conversion:\n{}", propertiesId, GSON.toJson(json));
         }
 
@@ -306,13 +309,13 @@ public class FSBInterop {
         json.add("properties", properties);
         json.add("conditions", conditions);
 
-        if (FSBInteropConfig.INSTANCE.debugMode) {
+        if (NuitInteropConfig.INSTANCE.debugMode) {
             this.logger.info("Generated {} skybox:\n{}", dimension, GSON.toJson(json));
         }
 
-        Identifier identifier = Identifier.of("fabricskyboxes-interop", type);
-        SkyboxManager.getInstance().addSkybox(identifier, json);
-        this.convertedSkyMap.put(identifier, GSON.toJson(json));
+        ResourceLocation resourceLocation = ResourceLocation.fromNamespaceAndPath("nuit-interop", type);
+        SkyboxManager.getInstance().addSkybox(resourceLocation, json);
+        this.convertedSkyMap.put(resourceLocation, GSON.toJson(json));
         this.logger.info("Added generated {} skybox!", dimension);
     }
 
@@ -359,20 +362,20 @@ public class FSBInterop {
         json.add("properties", properties);
         json.add("conditions", conditions);
         json.add("decorations", decorations);
-
-        if (FSBInteropConfig.INSTANCE.debugMode) {
+        if (NuitInteropConfig.INSTANCE.debugMode) {
             this.logger.info("Generated Overworld decorations:\n{}", GSON.toJson(json));
         }
-        Identifier identifier = Identifier.of("fabricskyboxes-interop", "overworld-decorations");
-        SkyboxManager.getInstance().addSkybox(identifier, json);
-        this.convertedSkyMap.put(identifier, GSON.toJson(json));
+
+        ResourceLocation resourceLocation = ResourceLocation.fromNamespaceAndPath("nuit-interop", "overworld-decorations");
+        SkyboxManager.getInstance().addSkybox(resourceLocation, json);
+        this.convertedSkyMap.put(resourceLocation, GSON.toJson(json));
         this.logger.info("Added generated Overworld decorations!");
     }
 
     /**
-     * Converts MCPatcher Sky Properties to FabricSkyboxes properties
+     * Converts MCPatcher Sky Properties to Nuit properties
      *
-     * @param json       The properties object for FabricSkyboxes
+     * @param json       The properties object for Nuit
      * @param properties The sky properties
      */
     private void processProperties(JsonObject json, Properties properties, String skyName) {
@@ -493,8 +496,8 @@ public class FSBInterop {
                 JsonArray jsonYRanges = new JsonArray();
                 minMaxEntries.forEach(minMaxEntry -> {
                     JsonObject minMax = new JsonObject();
-                    minMax.addProperty("min", minMaxEntry.getMin());
-                    minMax.addProperty("max", minMaxEntry.getMax());
+                    minMax.addProperty("min", minMaxEntry.min());
+                    minMax.addProperty("max", minMaxEntry.max());
                     jsonYRanges.add(minMax);
                 });
                 json.add("yRanges", jsonYRanges);
@@ -511,8 +514,8 @@ public class FSBInterop {
                 JsonArray loopRange = new JsonArray();
                 minMaxEntries.forEach(minMaxEntry -> {
                     JsonObject minMax = new JsonObject();
-                    minMax.addProperty("min", minMaxEntry.getMin());
-                    minMax.addProperty("max", minMaxEntry.getMax());
+                    minMax.addProperty("min", minMaxEntry.min());
+                    minMax.addProperty("max", minMaxEntry.max());
                     loopRange.add(minMax);
                 });
 
@@ -520,10 +523,9 @@ public class FSBInterop {
                 if (properties.containsKey("daysLoop")) {
                     value = Utils.parseInt(properties.getProperty("daysLoop"), 8);
                 }
+
                 loopObject.addProperty("days", value);
-
                 loopObject.add("ranges", loopRange);
-
                 json.add("loop", loopObject);
             }
         }

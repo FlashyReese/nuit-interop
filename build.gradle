@@ -1,5 +1,5 @@
 plugins {
-    id 'fabric-loom' version '1.6-SNAPSHOT'
+    id 'fabric-loom' version '1.9-SNAPSHOT'
     id 'maven-publish'
 }
 
@@ -27,19 +27,18 @@ repositories {
 
 dependencies {
     // To change the versions see the gradle.properties file
-    minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
-    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    minecraft "com.mojang:minecraft:${minecraft_version}"
+    mappings loom.officialMojangMappings()
+    modImplementation "net.fabricmc:fabric-loader:${loader_version}"
 
     // Fabric API. This is technically optional, but you probably want it anyway.
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_version}"
 
-    // FabricSkyBoxes
-    modImplementation("maven.modrinth:fabricskyboxes:mc1.21-0.7.4")
-    //modImplementation("io.github.amerebagatelle:fabricskyboxes:0.7.7+mc1.20.2")
+    // Nuit
+    modImplementation("io.github.amerebagatelle.mods:nuit-fabric:${nuit_version}")
 
     // Mod Menu
-    modImplementation('com.terraformersmc:modmenu:11.0.0-beta.1') {
+    modImplementation("com.terraformersmc:modmenu:${modmenu_version}") {
         exclude group: 'net.fabricmc.fabric-api'
     }
 }
@@ -109,6 +108,7 @@ static def getVersionMetadata() {
     if (build_id != null) {
         return "build.${build_id}"
     }
+
     // No tracking information could be found about the build
     return "unknown"
 }
