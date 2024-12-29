@@ -27,54 +27,12 @@ public class BlenderUtil {
         if (INSTANCE == null) {
             INSTANCE = new BlenderUtil();
         }
+
         return INSTANCE;
     }
 
-    public class NuitBlend {
-        private final int sourceFactor;
-        private final int destinationFactor;
-        private final int equation;
-        private final boolean redAlphaEnabled;
-        private final boolean greenAlphaEnabled;
-        private final boolean blueAlphaEnabled;
-        private final boolean alphaEnabled;
-
-        public NuitBlend(int sourceFactor, int destinationFactor, int equation, boolean redAlphaEnabled, boolean greenAlphaEnabled, boolean blueAlphaEnabled, boolean alphaEnabled) {
-            this.sourceFactor = sourceFactor;
-            this.destinationFactor = destinationFactor;
-            this.equation = equation;
-            this.redAlphaEnabled = redAlphaEnabled;
-            this.greenAlphaEnabled = greenAlphaEnabled;
-            this.blueAlphaEnabled = blueAlphaEnabled;
-            this.alphaEnabled = alphaEnabled;
-        }
-
-        public int getSourceFactor() {
-            return sourceFactor;
-        }
-
-        public int getDestinationFactor() {
-            return destinationFactor;
-        }
-
-        public int getEquation() {
-            return equation;
-        }
-
-        public boolean isRedAlphaEnabled() {
-            return redAlphaEnabled;
-        }
-
-        public boolean isGreenAlphaEnabled() {
-            return greenAlphaEnabled;
-        }
-
-        public boolean isBlueAlphaEnabled() {
-            return blueAlphaEnabled;
-        }
-
-        public boolean isAlphaEnabled() {
-            return alphaEnabled;
-        }
+    public record NuitBlend(int sourceFactor, int destinationFactor, int equation,
+                            boolean redAlphaEnabled, boolean greenAlphaEnabled, boolean blueAlphaEnabled,
+                            boolean alphaEnabled) {
     }
 }

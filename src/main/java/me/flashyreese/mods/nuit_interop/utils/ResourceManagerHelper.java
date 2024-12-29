@@ -1,8 +1,8 @@
 package me.flashyreese.mods.nuit_interop.utils;
 
-import net.minecraft.resource.Resource;
-import net.minecraft.resource.ResourceManager;
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.Resource;
+import net.minecraft.server.packs.resources.ResourceManager;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -16,16 +16,16 @@ public class ResourceManagerHelper {
         this.resourceManager = resourceManager;
     }
 
-    public Stream<Identifier> searchIn(String parent) {
-        return this.resourceManager.findResources(parent, path -> true).keySet().stream();
+    public Stream<ResourceLocation> searchIn(String parent) {
+        return this.resourceManager.listResources(parent, path -> true).keySet().stream();
     }
 
-    public InputStream getInputStream(Identifier identifier) {
+    public InputStream getInputStream(ResourceLocation identifier) {
         try {
             Optional<Resource> resource = this.resourceManager.getResource(identifier);
             if (resource.isEmpty())
                 return null;
-            return resource.get().getInputStream();
+            return resource.get().open();
         } catch (IOException e) {
             return null;
         }

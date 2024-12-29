@@ -2,14 +2,14 @@ package me.flashyreese.mods.nuit_interop.client.config;
 
 import me.flashyreese.mods.nuit_interop.NuitInterop;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.tooltip.Tooltip;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.screen.ScreenTexts;
-import net.minecraft.text.Text;
-import net.minecraft.util.Util;
+import net.minecraft.Util;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.CommonComponents;
+import net.minecraft.network.chat.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,7 +27,7 @@ public class NuitInteropConfigScreen extends Screen {
     private final Logger logger = LoggerFactory.getLogger("Nuit-Interop");
 
     public NuitInteropConfigScreen(Screen parent, NuitInteropConfig config) {
-        super(Text.translatable(getTranslationKey("title")));
+        super(Component.translatable(getTranslationKey("title")));
         this.parent = parent;
         this.config = config;
     }
@@ -42,108 +42,109 @@ public class NuitInteropConfigScreen extends Screen {
 
     @Override
     protected void init() {
-        addDrawableChild(createBooleanOptionButton(this.width / 2 - 100 - 110, this.height / 2 - 10 - 60, 420, 20, "interoperability", value -> config.interoperability = value, () -> config.interoperability, () -> {
-            MinecraftClient.getInstance().reloadResources();
+        addRenderableWidget(createBooleanOptionButton(this.width / 2 - 100 - 110, this.height / 2 - 10 - 60, 420, 20, "interoperability", value -> config.interoperability = value, () -> config.interoperability, () -> {
+            Minecraft.getInstance().reloadResourcePacks();
         }));
-        addDrawableChild(createNuitInteropModeOptionButton(this.width / 2 - 100 - 110, this.height / 2 - 10 - 36, 420, 20, "mode", value -> config.mode = value, () -> config.mode, () -> {
+        addRenderableWidget(createNuitInteropModeOptionButton(this.width / 2 - 100 - 110, this.height / 2 - 10 - 36, 420, 20, "mode", value -> config.mode = value, () -> config.mode, () -> {
             if (config.interoperability) {
-                MinecraftClient.getInstance().reloadResources();
+                Minecraft.getInstance().reloadResourcePacks();
             }
         }));
-        addDrawableChild(createBooleanOptionButton(this.width / 2 - 100 - 110, this.height / 2 - 10 - 12, 200, 20, "prefer_nuit_native", value -> config.preferNuitNative = value, () -> config.preferNuitNative, this::reloadResourcesIfInterop));
-        addDrawableChild(createBooleanOptionButton(this.width / 2 - 100 + 110, this.height / 2 - 10 - 12, 200, 20, "debug_mode", value -> config.debugMode = value, () -> config.debugMode, () -> {
+        addRenderableWidget(createBooleanOptionButton(this.width / 2 - 100 - 110, this.height / 2 - 10 - 12, 200, 20, "prefer_nuit_native", value -> config.preferNuitNative = value, () -> config.preferNuitNative, this::reloadResourcesIfInterop));
+        addRenderableWidget(createBooleanOptionButton(this.width / 2 - 100 + 110, this.height / 2 - 10 - 12, 200, 20, "debug_mode", value -> config.debugMode = value, () -> config.debugMode, () -> {
         }));
-        addDrawableChild(createBooleanOptionButton(this.width / 2 - 100 - 110, this.height / 2 - 10 + 12, 200, 20, "process_optifine", value -> config.processOptiFine = value, () -> config.processOptiFine, this::reloadResourcesIfInterop));
-        addDrawableChild(createBooleanOptionButton(this.width / 2 - 100 + 110, this.height / 2 - 10 + 12, 200, 20, "process_mcpatcher", value -> config.processMCPatcher = value, () -> config.processMCPatcher, this::reloadResourcesIfInterop));
-        addDrawableChild(ButtonWidget
-                .builder(
-                        Text.translatable(getTranslationKey("dump_data")),
-                        button -> {
-                            Path path = FabricLoader.getInstance().getGameDir().resolve("nuit-interop-dump");
+        addRenderableWidget(createBooleanOptionButton(this.width / 2 - 100 - 110, this.height / 2 - 10 + 12, 200, 20, "process_optifine", value -> config.processOptiFine = value, () -> config.processOptiFine, this::reloadResourcesIfInterop));
+        addRenderableWidget(createBooleanOptionButton(this.width / 2 - 100 + 110, this.height / 2 - 10 + 12, 200, 20, "process_mcpatcher", value -> config.processMCPatcher = value, () -> config.processMCPatcher, this::reloadResourcesIfInterop));
+        addRenderableWidget(Button.builder(
+                                Component.translatable(getTranslationKey("dump_data")),
+                                button -> {
+                                    Path path = FabricLoader.getInstance().getGameDir().resolve("nuit-interop-dump");
 
-                            try {
-                                // Delete the directory and its contents recursively
-                                if (Files.exists(path)) {
-                                    if (NuitInteropConfig.INSTANCE.debugMode) {
-                                        this.logger.info("Existing dump directory detected. Recursively deleting the contents...");
-                                    }
-                                    Files.walk(path)
-                                            .sorted(Comparator.reverseOrder())
-                                            .map(Path::toFile)
-                                            .filter(File::delete)
-                                            .forEach(file -> {
-                                                if (NuitInteropConfig.INSTANCE.debugMode) {
-                                                    this.logger.info("Deleted: {}", file.getAbsolutePath());
-                                                }
-                                            });
-                                }
-                            } catch (IOException e) {
-                                this.logger.error("Error while deleting existing dump directory: {}", e.getMessage());
-                            }
-
-                            try {
-                                // Create the directory if it doesn't exist
-                                if (!Files.exists(path)) {
-                                    Files.createDirectories(path);
-                                    if (NuitInteropConfig.INSTANCE.debugMode) {
-                                        this.logger.info("Dump directory created: {}", path.toAbsolutePath());
-                                    }
-                                }
-
-                                NuitInterop.getInstance()
-                                        .getConvertedSkyMap()
-                                        .forEach((identifier, json) -> {
-                                            String filename = identifier.toString();
-                                            // Fixme: Replace all characters that are not allowed in file names with underscores
-                                            filename = filename.replaceAll("[^a-zA-Z0-9-_\\.]", "_");
-
-                                            // Write the JSON data to a file
-                                            Path output = path.resolve(filename + ".json");
-                                            try {
-                                                Files.write(output, json.getBytes());
-                                                if (NuitInteropConfig.INSTANCE.debugMode) {
-                                                    this.logger.info("Successfully dumped {} to {}", identifier, output.toAbsolutePath());
-                                                }
-                                            } catch (IOException e) {
-                                                this.logger.error("Error while dumping {} to {}: {}", identifier, output.toAbsolutePath(), e.getMessage());
-                                                e.printStackTrace();
+                                    try {
+                                        // Delete the directory and its contents recursively
+                                        if (Files.exists(path)) {
+                                            if (NuitInteropConfig.INSTANCE.debugMode) {
+                                                this.logger.info("Existing dump directory detected. Recursively deleting the contents...");
                                             }
-                                        });
 
-                                if (NuitInteropConfig.INSTANCE.debugMode) {
-                                    this.logger.info("Opening dump directory: {}", path.toAbsolutePath());
+                                            Files.walk(path)
+                                                    .sorted(Comparator.reverseOrder())
+                                                    .map(Path::toFile)
+                                                    .filter(File::delete)
+                                                    .forEach(file -> {
+                                                        if (NuitInteropConfig.INSTANCE.debugMode) {
+                                                            this.logger.info("Deleted: {}", file.getAbsolutePath());
+                                                        }
+                                                    });
+                                        }
+                                    } catch (IOException e) {
+                                        this.logger.error("Error while deleting existing dump directory: {}", e.getMessage());
+                                    }
+
+                                    try {
+                                        // Create the directory if it doesn't exist
+                                        if (!Files.exists(path)) {
+                                            Files.createDirectories(path);
+                                            if (NuitInteropConfig.INSTANCE.debugMode) {
+                                                this.logger.info("Dump directory created: {}", path.toAbsolutePath());
+                                            }
+                                        }
+
+                                        NuitInterop.getInstance()
+                                                .getConvertedSkyMap()
+                                                .forEach((identifier, json) -> {
+                                                    String filename = identifier.toString();
+                                                    // Fixme: Replace all characters that are not allowed in file names with underscores
+                                                    filename = filename.replaceAll("[^a-zA-Z0-9-_\\.]", "_");
+
+                                                    // Write the JSON data to a file
+                                                    Path output = path.resolve(filename + ".json");
+                                                    try {
+                                                        Files.write(output, json.getBytes());
+                                                        if (NuitInteropConfig.INSTANCE.debugMode) {
+                                                            this.logger.info("Successfully dumped {} to {}", identifier, output.toAbsolutePath());
+                                                        }
+                                                    } catch (IOException e) {
+                                                        this.logger.error("Error while dumping {} to {}: {}", identifier, output.toAbsolutePath(), e.getMessage());
+                                                        e.printStackTrace();
+                                                    }
+                                                });
+
+                                        if (NuitInteropConfig.INSTANCE.debugMode) {
+                                            this.logger.info("Opening dump directory: {}", path.toAbsolutePath());
+                                        }
+
+                                        Util.getPlatform().openUri(path.toUri());
+                                    } catch (IOException e) {
+                                        this.logger.error("Error while creating dump directory: {}", e.getMessage());
+                                        e.printStackTrace();
+                                    }
                                 }
-                                Util.getOperatingSystem().open(path.toUri());
-                            } catch (IOException e) {
-                                this.logger.error("Error while creating dump directory: {}", e.getMessage());
-                                e.printStackTrace();
-                            }
-                        }
-                )
-                .dimensions(this.width / 2 - 100 - 110, this.height / 2 - 10 + 36, 420, 20)
-                .tooltip(Tooltip.of(Text.translatable(getTooltipKey(getTranslationKey("dump_data")))))
-                .build()
+                        )
+                        .bounds(this.width / 2 - 100 - 110, this.height / 2 - 10 + 36, 420, 20)
+                        .tooltip(Tooltip.create(Component.translatable(getTooltipKey(getTranslationKey("dump_data")))))
+                        .build()
         );
 
-        addDrawableChild(ButtonWidget.builder(ScreenTexts.DONE, button -> close()).dimensions(this.width / 2 - 100, this.height - 40, 200, 20).build());
+        addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, button -> onClose()).bounds(this.width / 2 - 100, this.height - 40, 200, 20).build());
     }
 
     private void reloadResourcesIfInterop() {
         if (this.config.interoperability) {
-            this.client.reloadResources();
+            this.minecraft.reloadResourcePacks();
         }
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        super.renderBackground(context, mouseX, mouseY, delta);
-        context.drawCenteredTextWithShadow(this.textRenderer, this.title, this.width / 2, 30, 0xFFFFFF);
-        super.render(context, mouseX, mouseY, delta);
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
+        super.renderBackground(graphics, mouseX, mouseY, delta);
+        graphics.drawCenteredString(this.font, this.title, this.width / 2, 30, 0xFFFFFF);
+        super.render(graphics, mouseX, mouseY, delta);
     }
 
     @Override
-    public void close() {
-        this.client.setScreen(parent);
+    public void onClose() {
+        this.minecraft.setScreen(parent);
     }
 
     @Override
@@ -151,31 +152,31 @@ public class NuitInteropConfigScreen extends Screen {
         this.config.writeChanges();
     }
 
-    private ButtonWidget createBooleanOptionButton(int x, int y, int width, int height, String key, Consumer<Boolean> consumer, Supplier<Boolean> supplier, Runnable onChange) {
+    private Button createBooleanOptionButton(int x, int y, int width, int height, String key, Consumer<Boolean> consumer, Supplier<Boolean> supplier, Runnable onChange) {
         String translationKey = getTranslationKey(key);
-        Text text = Text.translatable(translationKey);
-        Text tooltipText = Text.translatable(getTooltipKey(translationKey));
-        return ButtonWidget.builder(ScreenTexts.composeToggleText(text, supplier.get()), button -> {
+        Component text = Component.translatable(translationKey);
+        Component tooltipText = Component.translatable(getTooltipKey(translationKey));
+        return Button.builder(CommonComponents.optionStatus(text, supplier.get()), button -> {
             boolean newValue = !supplier.get();
-            button.setMessage(ScreenTexts.composeToggleText(text, newValue));
+            button.setMessage(CommonComponents.optionStatus(text, newValue));
             consumer.accept(newValue);
             onChange.run();
-        }).dimensions(x, y, width, height).tooltip(Tooltip.of(tooltipText)).build();
+        }).bounds(x, y, width, height).tooltip(Tooltip.create(tooltipText)).build();
     }
 
-    private ButtonWidget createNuitInteropModeOptionButton(int x, int y, int width, int height, String key, Consumer<NuitInteropMode> consumer, Supplier<NuitInteropMode> supplier, Runnable onChange) {
+    private Button createNuitInteropModeOptionButton(int x, int y, int width, int height, String key, Consumer<NuitInteropMode> consumer, Supplier<NuitInteropMode> supplier, Runnable onChange) {
         String translationKey = getTranslationKey(key);
-        Text text = Text.translatable(translationKey);
-        Text tooltipText = Text.translatable(getTooltipKey(translationKey));
-        return ButtonWidget.builder(ScreenTexts.composeGenericOptionText(text, Text.translatable(getTranslationKey(supplier.get().getTranslationKey()))), button -> {
+        Component text = Component.translatable(translationKey);
+        Component tooltipText = Component.translatable(getTooltipKey(translationKey));
+        return Button.builder(CommonComponents.optionNameValue(text, Component.translatable(getTranslationKey(supplier.get().getTranslationKey()))), button -> {
             NuitInteropMode currentMode = supplier.get();
             NuitInteropMode[] modes = NuitInteropMode.values();
             int currentIndex = currentMode.ordinal();
             int nextIndex = (currentIndex + 1) % modes.length; // Wrap around to the beginning if reached the end
             NuitInteropMode newValue = modes[nextIndex];
-            button.setMessage(ScreenTexts.composeGenericOptionText(text, Text.translatable(getTranslationKey(newValue.getTranslationKey()))));
+            button.setMessage(CommonComponents.optionNameValue(text, Component.translatable(getTranslationKey(newValue.getTranslationKey()))));
             consumer.accept(newValue);
             onChange.run();
-        }).dimensions(x, y, width, height).tooltip(Tooltip.of(tooltipText)).build();
+        }).bounds(x, y, width, height).tooltip(Tooltip.create(tooltipText)).build();
     }
 }

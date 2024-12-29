@@ -3,8 +3,8 @@ package me.flashyreese.mods.nuit_interop.utils;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import io.github.amerebagatelle.mods.nuit.components.MinMaxEntry;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.InvalidIdentifierException;
+import net.minecraft.ResourceLocationException;
+import net.minecraft.resources.ResourceLocation;
 
 import java.io.InputStream;
 import java.util.*;
@@ -13,14 +13,14 @@ import java.util.regex.Pattern;
 public final class Utils {
     private static final Pattern OPTIFINE_RANGE_SEPARATOR = Pattern.compile("(\\d|\\))-(\\d|\\()");
 
-    public static JsonObject convertOptiFineSkyProperties(ResourceManagerHelper resourceManagerHelper, Properties properties, Identifier propertiesIdentifier) {
+    public static JsonObject convertOptiFineSkyProperties(ResourceManagerHelper resourceManagerHelper, Properties properties, ResourceLocation propertiesIdentifier) {
         JsonObject jsonObject = new JsonObject();
 
-        Identifier sourceTexture = parseSourceTexture(properties.getProperty("source", null), resourceManagerHelper, propertiesIdentifier);
-
+        ResourceLocation sourceTexture = parseSourceTexture(properties.getProperty("source", null), resourceManagerHelper, propertiesIdentifier);
         if (sourceTexture == null) {
             return null;
         }
+
         jsonObject.addProperty("source", sourceTexture.toString());
 
         // Blend
@@ -163,8 +163,8 @@ public final class Utils {
         return jsonObject;
     }
 
-    public static Identifier parseSourceTexture(String source, ResourceManagerHelper resourceManagerHelper, Identifier propertiesId) {
-        Identifier textureId;
+    public static ResourceLocation parseSourceTexture(String source, ResourceManagerHelper resourceManagerHelper, ResourceLocation propertiesId) {
+        ResourceLocation textureId;
         String namespace;
         String path;
         if (source == null) {
@@ -181,7 +181,7 @@ public final class Utils {
                     namespace = parts[1];
                     path = parts[2];
                 } else {
-                    Identifier sourceIdentifier = Identifier.tryParse(source);
+                    ResourceLocation sourceIdentifier = ResourceLocation.tryParse(source);
                     if (sourceIdentifier != null) {
                         namespace = sourceIdentifier.getNamespace();
                         path = sourceIdentifier.getPath();
@@ -192,14 +192,16 @@ public final class Utils {
             }
         }
         try {
-            textureId = Identifier.of(namespace, path);
-        } catch (InvalidIdentifierException e) {
+            textureId = ResourceLocation.fromNamespaceAndPath(namespace, path);
+        } catch (ResourceLocationException e) {
             return null;
         }
+
         InputStream textureInputStream = resourceManagerHelper.getInputStream(textureId);
         if (textureInputStream == null) {
             return null;
         }
+
         return textureId;
     }
 
@@ -217,16 +219,15 @@ public final class Utils {
         if (result < 0) {
             result += 24000;
         }
+
         return result;
     }
 
     public static List<MinMaxEntry> parseMinMaxEntries(String str) {
         List<MinMaxEntry> minMaxEntries = new ArrayList<>();
         String[] strings = str.split(" ,");
-
         for (String s : strings) {
             MinMaxEntry minMaxEntry = parseMinMaxEntry(s);
-
             if (minMaxEntry != null) {
                 minMaxEntries.add(minMaxEntry);
             }
@@ -248,7 +249,6 @@ public final class Utils {
                 }
             } else {
                 int value = parseInt(str, -1);
-
                 if (value >= 0) {
                     return new MinMaxEntry(value, value);
                 }
@@ -261,10 +261,8 @@ public final class Utils {
     public static List<MinMaxEntry> parseMinMaxEntriesNegative(String str) {
         List<MinMaxEntry> minMaxEntries = new ArrayList<>();
         String[] strings = str.split(" ,");
-
         for (String s : strings) {
             MinMaxEntry minMaxEntry = parseMinMaxEntryNegative(s);
-
             if (minMaxEntry != null) {
                 minMaxEntries.add(minMaxEntry);
             }
@@ -276,14 +274,11 @@ public final class Utils {
     private static MinMaxEntry parseMinMaxEntryNegative(String str) {
         if (str != null) {
             String s = OPTIFINE_RANGE_SEPARATOR.matcher(str).replaceAll("$1=$2");
-
             if (s.contains("=")) {
                 String[] strings = s.split("=");
-
                 if (strings.length == 2) {
                     int j = parseInt(stripBrackets(strings[0]), Integer.MIN_VALUE);
                     int k = parseInt(stripBrackets(strings[1]), Integer.MIN_VALUE);
-
                     if (j != Integer.MIN_VALUE && k != Integer.MIN_VALUE) {
                         int min = Math.min(j, k);
                         int max = Math.max(j, k);
@@ -292,7 +287,6 @@ public final class Utils {
                 }
             } else {
                 int i = parseInt(stripBrackets(str), Integer.MIN_VALUE);
-
                 if (i != Integer.MIN_VALUE) {
                     return new MinMaxEntry(i, i);
                 }

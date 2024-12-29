@@ -15,9 +15,9 @@ import me.flashyreese.mods.nuit_interop.sky.OptiFineCustomSky;
 import me.flashyreese.mods.nuit_interop.utils.BlenderUtil;
 import me.flashyreese.mods.nuit_interop.utils.ResourceManagerHelper;
 import me.flashyreese.mods.nuit_interop.utils.Utils;
-import net.minecraft.resource.ResourceManager;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.InvalidIdentifierException;
+import net.minecraft.ResourceLocationException;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.ResourceManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,17 +35,18 @@ public class NuitInterop {
     private static final String MCPATCHER_SKY_PARENT = "mcpatcher/sky";
     private static final Pattern MCPATCHER_SKY_PATTERN = Pattern.compile("mcpatcher/sky/(?<world>\\w+)/(?<name>\\w+).properties$");
     private static NuitInterop INSTANCE;
-    private final Map<Identifier, String> convertedSkyMap = new HashMap<>();
+    private final Map<ResourceLocation, String> convertedSkyMap = new HashMap<>();
     private final Logger logger = LoggerFactory.getLogger("Nuit-Interop");
 
     public static NuitInterop getInstance() {
         if (INSTANCE == null) {
             INSTANCE = new NuitInterop();
         }
+
         return INSTANCE;
     }
 
-    public Map<Identifier, String> getConvertedSkyMap() {
+    public Map<ResourceLocation, String> getConvertedSkyMap() {
         return convertedSkyMap;
     }
 
@@ -90,7 +91,7 @@ public class NuitInterop {
         final JsonArray endLayers = new JsonArray();
         resourceManagerHelper.searchIn(skyParent)
                 .filter(id -> id.getPath().endsWith(".properties"))
-                .sorted(Comparator.comparing(Identifier::getPath, (id1, id2) -> {
+                .sorted(Comparator.comparing(ResourceLocation::getPath, (id1, id2) -> {
                     // Sorting for older versions of Nuit without priority
                     Matcher matcherId1 = pattern.matcher(id1);
                     Matcher matcherId2 = pattern.matcher(id2);
@@ -108,9 +109,9 @@ public class NuitInterop {
                     if (matcher.find()) {
                         String world = matcher.group("world");
                         String name = matcher.group("name");
-
-                        if (world == null || name == null)
+                        if (world == null || name == null) {
                             return;
+                        }
 
                         if (name.equals("moon_phases") || name.equals("sun")) {
                             this.logger.info("Skipping {}, moon_phases/sun aren't supported!", id);
@@ -124,6 +125,7 @@ public class NuitInterop {
                             if (NuitInteropConfig.INSTANCE.debugMode) {
                                 this.logger.error("Error trying to read namespaced identifier: {}", id);
                             }
+
                             return;
                         }
 
@@ -134,6 +136,7 @@ public class NuitInterop {
                             if (NuitInteropConfig.INSTANCE.debugMode) {
                                 this.logger.error("Error trying to read namespaced identifier: {}", id);
                             }
+
                             return;
                         } finally {
                             try {
@@ -181,7 +184,7 @@ public class NuitInterop {
                 overworldJson.addProperty("world", "minecraft:overworld");
 
                 Skybox skybox = OptiFineCustomSky.CODEC.decode(JsonOps.INSTANCE, overworldJson).getOrThrow().getFirst();
-                SkyboxManager.getInstance().addSkybox(Identifier.of("nuit-interop", "native-optifine-custom-sky-overworld"), skybox);
+                SkyboxManager.getInstance().addSkybox(ResourceLocation.fromNamespaceAndPath("nuit-interop", "native-optifine-custom-sky-overworld"), skybox);
             }
 
             if (!endLayers.isEmpty()) {
@@ -192,7 +195,7 @@ public class NuitInterop {
                 endJson.addProperty("world", "minecraft:the_end");
 
                 Skybox skybox = OptiFineCustomSky.CODEC.decode(JsonOps.INSTANCE, endJson).getOrThrow().getFirst();
-                SkyboxManager.getInstance().addSkybox(Identifier.of("nuit-interop", "native-optifine-custom-sky-end"), skybox);
+                SkyboxManager.getInstance().addSkybox(ResourceLocation.fromNamespaceAndPath("nuit-interop", "native-optifine-custom-sky-end"), skybox);
             }
         }
     }
@@ -204,7 +207,7 @@ public class NuitInterop {
      * @param properties   The MCPatcher properties file.
      * @param world        The world name
      */
-    private void convert(ResourceManagerHelper resourceManagerHelper, String skyParent, String skyName, Identifier propertiesId, Properties properties, String world) {
+    private void convert(ResourceManagerHelper resourceManagerHelper, String skyParent, String skyName, ResourceLocation propertiesId, Properties properties, String world) {
         // Blend
         JsonObject blend = new JsonObject();
         String blendType = properties.getProperty("blend", "add");
@@ -212,8 +215,7 @@ public class NuitInterop {
         //blend.addProperty("type", blendType);
         blend.add("blender", GSON.toJsonTree(BlenderUtil.getInstance().BLEND_MAP.getOrDefault(blendType, BlenderUtil.getInstance().BLEND_MAP.get("add"))).getAsJsonObject());
 
-        // Texture Identifier
-        Identifier textureId;
+        ResourceLocation textureId;
         String source = properties.getProperty("source");
         String namespace;
         String path;
@@ -230,7 +232,7 @@ public class NuitInterop {
                     namespace = parts[1];
                     path = parts[2];
                 } else {
-                    Identifier sourceIdentifier = Identifier.tryParse(source);
+                    ResourceLocation sourceIdentifier = ResourceLocation.tryParse(source);
                     if (sourceIdentifier != null) {
                         namespace = sourceIdentifier.getNamespace();
                         path = sourceIdentifier.getPath();
@@ -242,8 +244,8 @@ public class NuitInterop {
             }
         }
         try {
-            textureId = Identifier.of(namespace, path);
-        } catch (InvalidIdentifierException e) {
+            textureId = ResourceLocation.fromNamespaceAndPath(namespace, path);
+        } catch (ResourceLocationException e) {
             this.logger.error("Illegal character in namespaced identifier: {}", source);
             return;
         }
@@ -308,7 +310,7 @@ public class NuitInterop {
             this.logger.info("Generated {} skybox:\n{}", dimension, GSON.toJson(json));
         }
 
-        Identifier identifier = Identifier.of("nuit-interop", type);
+        ResourceLocation identifier = ResourceLocation.fromNamespaceAndPath("nuit-interop", type);
         SkyboxManager.getInstance().addSkybox(identifier, json);
         this.convertedSkyMap.put(identifier, GSON.toJson(json));
         this.logger.info("Added generated {} skybox!", dimension);
@@ -357,11 +359,11 @@ public class NuitInterop {
         json.add("properties", properties);
         json.add("conditions", conditions);
         json.add("decorations", decorations);
-
         if (NuitInteropConfig.INSTANCE.debugMode) {
             this.logger.info("Generated Overworld decorations:\n{}", GSON.toJson(json));
         }
-        Identifier identifier = Identifier.of("nuit-interop", "overworld-decorations");
+
+        ResourceLocation identifier = ResourceLocation.fromNamespaceAndPath("nuit-interop", "overworld-decorations");
         SkyboxManager.getInstance().addSkybox(identifier, json);
         this.convertedSkyMap.put(identifier, GSON.toJson(json));
         this.logger.info("Added generated Overworld decorations!");
