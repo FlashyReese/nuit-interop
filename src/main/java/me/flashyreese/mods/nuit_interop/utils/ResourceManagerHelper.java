@@ -20,9 +20,9 @@ public class ResourceManagerHelper {
         return this.resourceManager.listResources(parent, path -> true).keySet().stream();
     }
 
-    public InputStream getInputStream(ResourceLocation identifier) {
+    public InputStream getInputStream(ResourceLocation resourceLocation) {
         try {
-            Optional<Resource> resource = this.resourceManager.getResource(identifier);
+            Optional<Resource> resource = this.resourceManager.getResource(resourceLocation);
             if (resource.isEmpty())
                 return null;
             return resource.get().open();

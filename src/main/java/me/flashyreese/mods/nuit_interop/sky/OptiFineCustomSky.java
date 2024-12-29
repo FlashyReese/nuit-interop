@@ -32,20 +32,20 @@ import java.util.List;
 public class OptiFineCustomSky implements Skybox {
     public static final Codec<OptiFineCustomSky> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             OptiFineSkyLayer.CODEC.listOf().optionalFieldOf("layers", ImmutableList.of()).forGetter(OptiFineCustomSky::getLayers),
-            Level.RESOURCE_KEY_CODEC.fieldOf("world").forGetter(OptiFineCustomSky::getWorldIdentifier)
+            Level.RESOURCE_KEY_CODEC.fieldOf("world").forGetter(OptiFineCustomSky::getWorldResourceKey)
     ).apply(instance, OptiFineCustomSky::new));
 
     private final List<OptiFineSkyLayer> layers;
-    private final ResourceKey<Level> worldIdentifier;
+    private final ResourceKey<Level> worldResourceKey;
 
     private final Minecraft client = Minecraft.getInstance();
     private ClientLevel level = client.level;
 
     private boolean active = true;
 
-    public OptiFineCustomSky(List<OptiFineSkyLayer> layers, ResourceKey<Level> worldIdentifier) {
+    public OptiFineCustomSky(List<OptiFineSkyLayer> layers, ResourceKey<Level> worldResourceKey) {
         this.layers = layers;
-        this.worldIdentifier = worldIdentifier;
+        this.worldResourceKey = worldResourceKey;
     }
 
     @Override
@@ -54,22 +54,22 @@ public class OptiFineCustomSky implements Skybox {
         this.renderSky(skyRendererAccessor, poseStack, tickDelta, camera, bufferSource, fogParameters, fogCallback);
     }
 
-    private void renderEndSky(PoseStack matrices) {
+    private void renderEndSky(PoseStack poseStack) {
         RenderSystem.enableBlend();
         RenderSystem.depthMask(false);
         RenderSystem.setShader(CoreShaders.POSITION_TEX_COLOR);
         RenderSystem.setShaderTexture(0, SkyRendererAccessor.getEndSky());
         for (int i = 0; i < 6; ++i) {
-            matrices.pushPose();
+            poseStack.pushPose();
             switch (i) {
-                case 1 -> matrices.mulPose(Axis.XP.rotationDegrees(90.0f));
-                case 2 -> matrices.mulPose(Axis.XP.rotationDegrees(-90.0f));
-                case 3 -> matrices.mulPose(Axis.XP.rotationDegrees(180.0f));
-                case 4 -> matrices.mulPose(Axis.ZP.rotationDegrees(90.0f));
-                case 5 -> matrices.mulPose(Axis.ZP.rotationDegrees(-90.0f));
+                case 1 -> poseStack.mulPose(Axis.XP.rotationDegrees(90.0f));
+                case 2 -> poseStack.mulPose(Axis.XP.rotationDegrees(-90.0f));
+                case 3 -> poseStack.mulPose(Axis.XP.rotationDegrees(180.0f));
+                case 4 -> poseStack.mulPose(Axis.ZP.rotationDegrees(90.0f));
+                case 5 -> poseStack.mulPose(Axis.ZP.rotationDegrees(-90.0f));
             }
 
-            Matrix4f matrix4f = matrices.last().pose();
+            Matrix4f matrix4f = poseStack.last().pose();
             VertexBuffer buffer = VertexBuffer.uploadStatic(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR, vertexConsumer -> {
                 vertexConsumer.addVertex(matrix4f, -100.0f, -100.0f, -100.0f).setUv(0.0f, 0.0f).setColor(40, 40, 40, 255);
                 vertexConsumer.addVertex(matrix4f, -100.0f, -100.0f, 100.0f).setUv(0.0f, 16.0f).setColor(40, 40, 40, 255);
@@ -81,10 +81,10 @@ public class OptiFineCustomSky implements Skybox {
             buffer.drawWithShader(RenderSystem.getModelViewMatrix(), RenderSystem.getProjectionMatrix(), RenderSystem.getShader());
             VertexBuffer.unbind();
 
-            matrices.popPose();
+            poseStack.popPose();
         }
 
-        this.render(matrices, this.level, 0.0F);
+        this.render(poseStack, this.level, 0.0F);
         RenderSystem.depthMask(true);
         RenderSystem.disableBlend();
     }
@@ -218,7 +218,7 @@ public class OptiFineCustomSky implements Skybox {
         }
     }
 
-    private void render(PoseStack matrixStack, Level level, float tickDelta) {
+    private void render(PoseStack poseStack, Level level, float tickDelta) {
         int timeOfDay = (int) (level.getTimeOfDay(tickDelta) % 24000L);
         float skyAngle = level.getTimeOfDay(tickDelta);
         float rainGradient = level.getRainLevel(tickDelta);
@@ -230,7 +230,7 @@ public class OptiFineCustomSky implements Skybox {
 
         for (OptiFineSkyLayer optiFineSkyLayer : this.layers) {
             if (optiFineSkyLayer.isActive(timeOfDay)) {
-                optiFineSkyLayer.render(level, matrixStack, timeOfDay, skyAngle, rainGradient, thunderGradient);
+                optiFineSkyLayer.render(level, poseStack, timeOfDay, skyAngle, rainGradient, thunderGradient);
             }
         }
 
@@ -241,7 +241,7 @@ public class OptiFineCustomSky implements Skybox {
     @Override
     public void tick(ClientLevel clientLevel) {
         this.active = true;
-        if (clientLevel.dimension() != this.worldIdentifier) {
+        if (clientLevel.dimension() != this.worldResourceKey) {
             this.layers.forEach(layer -> layer.setConditionAlpha(-1.0F));
             this.active = false;
         } else {
@@ -258,7 +258,7 @@ public class OptiFineCustomSky implements Skybox {
         return layers;
     }
 
-    public ResourceKey<Level> getWorldIdentifier() {
-        return worldIdentifier;
+    public ResourceKey<Level> getWorldResourceKey() {
+        return worldResourceKey;
     }
 }

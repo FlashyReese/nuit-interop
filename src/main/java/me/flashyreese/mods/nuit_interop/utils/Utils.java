@@ -13,10 +13,10 @@ import java.util.regex.Pattern;
 public final class Utils {
     private static final Pattern OPTIFINE_RANGE_SEPARATOR = Pattern.compile("(\\d|\\))-(\\d|\\()");
 
-    public static JsonObject convertOptiFineSkyProperties(ResourceManagerHelper resourceManagerHelper, Properties properties, ResourceLocation propertiesIdentifier) {
+    public static JsonObject convertOptiFineSkyProperties(ResourceManagerHelper resourceManagerHelper, Properties properties, ResourceLocation propertiesResourceLocation) {
         JsonObject jsonObject = new JsonObject();
 
-        ResourceLocation sourceTexture = parseSourceTexture(properties.getProperty("source", null), resourceManagerHelper, propertiesIdentifier);
+        ResourceLocation sourceTexture = parseSourceTexture(properties.getProperty("source", null), resourceManagerHelper, propertiesResourceLocation);
         if (sourceTexture == null) {
             return null;
         }
@@ -181,10 +181,10 @@ public final class Utils {
                     namespace = parts[1];
                     path = parts[2];
                 } else {
-                    ResourceLocation sourceIdentifier = ResourceLocation.tryParse(source);
-                    if (sourceIdentifier != null) {
-                        namespace = sourceIdentifier.getNamespace();
-                        path = sourceIdentifier.getPath();
+                    ResourceLocation sourceResourceLocation = ResourceLocation.tryParse(source);
+                    if (sourceResourceLocation != null) {
+                        namespace = sourceResourceLocation.getNamespace();
+                        path = sourceResourceLocation.getPath();
                     } else {
                         return null;
                     }

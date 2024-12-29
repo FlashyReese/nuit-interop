@@ -232,10 +232,10 @@ public class NuitInterop {
                     namespace = parts[1];
                     path = parts[2];
                 } else {
-                    ResourceLocation sourceIdentifier = ResourceLocation.tryParse(source);
-                    if (sourceIdentifier != null) {
-                        namespace = sourceIdentifier.getNamespace();
-                        path = sourceIdentifier.getPath();
+                    ResourceLocation sourceResourceLocation = ResourceLocation.tryParse(source);
+                    if (sourceResourceLocation != null) {
+                        namespace = sourceResourceLocation.getNamespace();
+                        path = sourceResourceLocation.getPath();
                     } else {
                         this.logger.error("Invalid source format: {}", source);
                         return;
@@ -310,9 +310,9 @@ public class NuitInterop {
             this.logger.info("Generated {} skybox:\n{}", dimension, GSON.toJson(json));
         }
 
-        ResourceLocation identifier = ResourceLocation.fromNamespaceAndPath("nuit-interop", type);
-        SkyboxManager.getInstance().addSkybox(identifier, json);
-        this.convertedSkyMap.put(identifier, GSON.toJson(json));
+        ResourceLocation resourceLocation = ResourceLocation.fromNamespaceAndPath("nuit-interop", type);
+        SkyboxManager.getInstance().addSkybox(resourceLocation, json);
+        this.convertedSkyMap.put(resourceLocation, GSON.toJson(json));
         this.logger.info("Added generated {} skybox!", dimension);
     }
 
@@ -363,9 +363,9 @@ public class NuitInterop {
             this.logger.info("Generated Overworld decorations:\n{}", GSON.toJson(json));
         }
 
-        ResourceLocation identifier = ResourceLocation.fromNamespaceAndPath("nuit-interop", "overworld-decorations");
-        SkyboxManager.getInstance().addSkybox(identifier, json);
-        this.convertedSkyMap.put(identifier, GSON.toJson(json));
+        ResourceLocation resourceLocation = ResourceLocation.fromNamespaceAndPath("nuit-interop", "overworld-decorations");
+        SkyboxManager.getInstance().addSkybox(resourceLocation, json);
+        this.convertedSkyMap.put(resourceLocation, GSON.toJson(json));
         this.logger.info("Added generated Overworld decorations!");
     }
 

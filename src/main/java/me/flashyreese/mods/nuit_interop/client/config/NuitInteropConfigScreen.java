@@ -92,8 +92,8 @@ public class NuitInteropConfigScreen extends Screen {
 
                                         NuitInterop.getInstance()
                                                 .getConvertedSkyMap()
-                                                .forEach((identifier, json) -> {
-                                                    String filename = identifier.toString();
+                                                .forEach((resourceLocation, json) -> {
+                                                    String filename = resourceLocation.toString();
                                                     // Fixme: Replace all characters that are not allowed in file names with underscores
                                                     filename = filename.replaceAll("[^a-zA-Z0-9-_\\.]", "_");
 
@@ -102,10 +102,10 @@ public class NuitInteropConfigScreen extends Screen {
                                                     try {
                                                         Files.write(output, json.getBytes());
                                                         if (NuitInteropConfig.INSTANCE.debugMode) {
-                                                            this.logger.info("Successfully dumped {} to {}", identifier, output.toAbsolutePath());
+                                                            this.logger.info("Successfully dumped {} to {}", resourceLocation, output.toAbsolutePath());
                                                         }
                                                     } catch (IOException e) {
-                                                        this.logger.error("Error while dumping {} to {}: {}", identifier, output.toAbsolutePath(), e.getMessage());
+                                                        this.logger.error("Error while dumping {} to {}: {}", resourceLocation, output.toAbsolutePath(), e.getMessage());
                                                         e.printStackTrace();
                                                     }
                                                 });
