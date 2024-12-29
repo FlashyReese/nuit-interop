@@ -109,6 +109,7 @@ static def getVersionMetadata() {
     if (build_id != null) {
         return "build.${build_id}"
     }
+
     // No tracking information could be found about the build
     return "unknown"
 }

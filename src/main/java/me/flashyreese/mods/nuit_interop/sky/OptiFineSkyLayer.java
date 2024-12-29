@@ -217,33 +217,30 @@ public class OptiFineSkyLayer {
 
     private float getFadeAlpha(int timeOfDay) {
         if (!this.fade.alwaysOn()) {
-            return 1.0F; // TODO
-//            return Utils.calculateFadeAlphaValue(1.0F, 0.0F, timeOfDay, this.fade.getStartFadeIn(), this.fade.getEndFadeIn(), this.fade.getStartFadeOut(), this.fade.getEndFadeOut());
+            return this.conditionAlpha; // TODO: Utils.calculateFadeAlphaValue(1.0F, 0.0F, timeOfDay, this.fade.getStartFadeIn(), this.fade.getEndFadeIn(), this.fade.getStartFadeOut(), this.fade.getEndFadeOut());
         } else {
             return 1.0F;
         }
     }
 
     public boolean isActive(int timeOfDay) {
-        return true; // TODO
-//        if (!this.fade.alwaysOn() && Utils.isInTimeInterval(timeOfDay, this.fade.getEndFadeOut(), this.fade.getStartFadeIn())) {
-//            return false;
-//        } else {
-//            if (this.loop.getRanges() != null) {
-//                long adjustedTime = timeOfDay - (long) this.fade.getStartFadeIn();
-//                // Ensure adjustedTime is a non-negative value in the range of days
-//                while (adjustedTime < 0L) {
-//                    adjustedTime += 24000L * (int) this.loop.getDays();
-//                }
-//
-//                int daysPassed = (int) (adjustedTime / 24000L);
-//                int currentDay = daysPassed % (int) this.loop.getDays();
-//
-//                return Utils.checkRanges(currentDay, this.loop.getRanges(), false /* TODO: inverse? */);
-//            }
-//
-//            return true;
-//        }
+        if (!this.fade.alwaysOn()) { // TODO: && Utils.isInTimeInterval(timeOfDay, this.fade.getEndFadeOut(), this.fade.getStartFadeIn())) {
+            return false;
+        } else {
+            if (this.loop.getRanges() != null) {
+                long adjustedTime = timeOfDay - 0L; // TODO: (long) this.fade.getStartFadeIn();
+                // Ensure adjustedTime is a non-negative value in the range of days
+                while (adjustedTime < 0L) {
+                    adjustedTime += 24000L * (int) this.loop.getDays();
+                }
+
+                int daysPassed = (int) (adjustedTime / 24000L);
+                int currentDay = daysPassed % (int) this.loop.getDays();
+                return Utils.checkRanges(currentDay, this.loop.getRanges(), false /* TODO: inverse? */);
+            }
+
+            return true;
+        }
     }
 
     public ResourceLocation getSource() {
