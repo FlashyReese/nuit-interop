@@ -6,7 +6,6 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.serialization.Codec;
 
 import java.util.Map;
-import java.util.Objects;
 import java.util.function.Consumer;
 
 public enum OptiFineBlend {
@@ -74,16 +73,12 @@ public enum OptiFineBlend {
         this.blendFunc = blendFunc;
     }
 
-    public String getName() {
-        return name;
-    }
-
     public Consumer<Float> getBlendFunc() {
         return blendFunc;
     }
 
     public static OptiFineBlend fromString(String name) {
-        return Objects.requireNonNull(VALUES.get(name));
+        return VALUES.getOrDefault(name, ADD);
     }
 
     @Override

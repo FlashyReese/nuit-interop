@@ -61,6 +61,7 @@ public class NuitInterop {
             } else {
                 this.logger.warn("Nuit-Interop is preventing native Nuit resource packs from loading!");
             }
+
             this.logger.warn("Removing existing Nuit skies...");
             this.logger.warn("Nuit-Interop is converting MCPatcher/OptiFine custom skies resource packs! Any visual bugs are likely caused by Nuit-Interop. Please do not report these issues to Nuit nor Resource Pack creators!");
             SkyboxManager.getInstance().clearSkyboxes();
@@ -70,11 +71,13 @@ public class NuitInterop {
     }
 
     public void convert(ResourceManagerHelper managerAccessor) {
-        if (NuitInteropConfig.INSTANCE.processOptiFine)
+        if (NuitInteropConfig.INSTANCE.processOptiFine) {
             this.convertNamespace(managerAccessor, OPTIFINE_SKY_PARENT, OPTIFINE_SKY_PATTERN);
+        }
 
-        if (NuitInteropConfig.INSTANCE.processMCPatcher)
+        if (NuitInteropConfig.INSTANCE.processMCPatcher) {
             this.convertNamespace(managerAccessor, MCPATCHER_SKY_PARENT, MCPATCHER_SKY_PATTERN);
+        }
     }
 
     /**
