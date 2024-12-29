@@ -90,9 +90,10 @@ public class OptiFineCustomSky implements Skybox {
     }
 
     public void renderSky(SkyRendererAccessor skyRendererAccessor, PoseStack poseStack, float tickDelta, Camera camera, MultiBufferSource.BufferSource bufferSource, FogParameters fogParameters, Runnable fogCallback) {
-        fogCallback.run();
+//        fogCallback.run(); // TODO/Fix: Causes cloud fog to flicker?
         FogType cameraSubmersionType = camera.getFluidInCamera();
         if (cameraSubmersionType != FogType.POWDER_SNOW && cameraSubmersionType != FogType.LAVA && !(this.hasBlindnessOrDarkness(camera))) {
+            assert this.client.level != null;
             if (this.client.level.effects().skyType() == DimensionSpecialEffects.SkyType.END) {
                 this.renderEndSky(poseStack);
             } else if (this.client.level.effects().skyType() == DimensionSpecialEffects.SkyType.OVERWORLD) {
@@ -103,9 +104,7 @@ public class OptiFineCustomSky implements Skybox {
                 RenderSystem.setShaderFog(fogParameters);
                 RenderSystem.depthMask(false);
                 RenderSystem.setShaderColor(f, g, h, 1.0F);
-                skyRendererAccessor.getTopSkyBuffer().bind();
                 skyRendererAccessor.getTopSkyBuffer().drawWithRenderType(RenderType.sky());
-                VertexBuffer.unbind();
                 RenderSystem.enableBlend();
                 int sunriseOrSunsetColor = this.level.effects().getSunriseOrSunsetColor(this.level.getTimeOfDay(tickDelta));
                 if (sunriseOrSunsetColor != -1) {
@@ -187,10 +186,8 @@ public class OptiFineCustomSky implements Skybox {
                 if (u > 0.0F) {
                     RenderSystem.setShaderColor(u, u, u, u);
                     RenderSystem.setShaderFog(FogParameters.NO_FOG);
-                    skyRendererAccessor.getStarsBuffer().bind();
                     skyRendererAccessor.getStarsBuffer().drawWithRenderType(RenderType.stars());
-                    VertexBuffer.unbind();
-                    fogCallback.run();
+//                    fogCallback.run(); // TODO/Fix: Causes cloud fog to flicker?
                 }
 
                 RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
@@ -202,9 +199,7 @@ public class OptiFineCustomSky implements Skybox {
                 if (d < 0.0) {
                     poseStack.pushPose();
                     poseStack.translate(0.0F, 12.0F, 0.0F);
-                    skyRendererAccessor.getBottomSkyBuffer().bind();
                     skyRendererAccessor.getBottomSkyBuffer().drawWithRenderType(RenderType.sky());
-                    VertexBuffer.unbind();
                     poseStack.popPose();
                 }
 
