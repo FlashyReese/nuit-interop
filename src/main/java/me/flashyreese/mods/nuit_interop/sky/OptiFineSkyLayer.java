@@ -217,7 +217,8 @@ public class OptiFineSkyLayer {
 
     private float getFadeAlpha(int timeOfDay) {
         if (!this.fade.alwaysOn()) {
-            return this.conditionAlpha; // TODO: Utils.calculateFadeAlphaValue(1.0F, 0.0F, timeOfDay, this.fade.getStartFadeIn(), this.fade.getEndFadeIn(), this.fade.getStartFadeOut(), this.fade.getEndFadeOut());
+            return this.conditionAlpha; // TODO/NOTE: idk if conditionAlpha is the actual value we want
+            // TODO: Utils.calculateFadeAlphaValue(1.0F, 0.0F, timeOfDay, this.fade.getStartFadeIn(), this.fade.getEndFadeIn(), this.fade.getStartFadeOut(), this.fade.getEndFadeOut());
         } else {
             return 1.0F;
         }
