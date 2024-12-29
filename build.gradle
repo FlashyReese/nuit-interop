@@ -35,8 +35,7 @@ dependencies {
     modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_version}"
 
     // Nuit
-    // modImplementation("maven.modrinth:fabricskyboxes:mc1.21-0.7.4")
-    modImplementation(files("lib/nuit-fabric-1.0.1-snapshot+mc1.21.4-local.jar"))
+    modImplementation("io.github.amerebagatelle.mods:nuit-fabric:${nuit_version}")
 
     // Mod Menu
     modImplementation("com.terraformersmc:modmenu:${modmenu_version}") {
