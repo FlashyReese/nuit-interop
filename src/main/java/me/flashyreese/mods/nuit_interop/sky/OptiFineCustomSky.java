@@ -51,7 +51,7 @@ public class OptiFineCustomSky implements Skybox {
     @Override
     public void render(SkyRendererAccessor skyRendererAccessor, PoseStack poseStack, float tickDelta, Camera camera, MultiBufferSource.BufferSource bufferSource, FogParameters fogParameters, Runnable fogCallback) {
         this.level = (ClientLevel) camera.getEntity().getCommandSenderWorld();
-        this.renderSky(skyRendererAccessor, poseStack, tickDelta, camera, bufferSource, fogParameters, fogCallback);
+        this.renderSky(skyRendererAccessor, poseStack, tickDelta, camera, fogParameters, fogCallback);
     }
 
     private void renderEndSky(PoseStack poseStack) {
@@ -89,7 +89,7 @@ public class OptiFineCustomSky implements Skybox {
         RenderSystem.disableBlend();
     }
 
-    public void renderSky(SkyRendererAccessor skyRendererAccessor, PoseStack poseStack, float tickDelta, Camera camera, MultiBufferSource.BufferSource bufferSource, FogParameters fogParameters, Runnable fogCallback) {
+    public void renderSky(SkyRendererAccessor skyRendererAccessor, PoseStack poseStack, float tickDelta, Camera camera, FogParameters fogParameters, Runnable fogCallback) {
 //        fogCallback.run(); // TODO/Fix: Causes cloud fog to flicker?
         FogType cameraSubmersionType = camera.getFluidInCamera();
         if (cameraSubmersionType != FogType.POWDER_SNOW && cameraSubmersionType != FogType.LAVA && !(this.hasBlindnessOrDarkness(camera))) {
