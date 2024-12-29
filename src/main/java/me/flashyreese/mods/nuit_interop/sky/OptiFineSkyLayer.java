@@ -180,7 +180,7 @@ public class OptiFineSkyLayer {
             }
         }
 
-        return this.heights == null || Utils.checkRanges(entityPos.getY(), this.heights, false);
+        return this.heights == null || Utils.checkRanges(entityPos.getY(), this.heights, false /* TODO: inverse? */);
     }
 
     private float getPositionBrightness(Level world) {
@@ -239,7 +239,7 @@ public class OptiFineSkyLayer {
 //                int daysPassed = (int) (adjustedTime / 24000L);
 //                int currentDay = daysPassed % (int) this.loop.getDays();
 //
-//                return Utils.checkRanges(currentDay, this.loop.getRanges());
+//                return Utils.checkRanges(currentDay, this.loop.getRanges(), false /* TODO: inverse? */);
 //            }
 //
 //            return true;
