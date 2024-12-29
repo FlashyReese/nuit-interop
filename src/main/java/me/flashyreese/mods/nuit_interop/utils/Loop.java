@@ -10,27 +10,12 @@ import io.github.amerebagatelle.mods.nuit.util.CodecUtils;
 import java.util.Collection;
 import java.util.List;
 
-public class Loop {
+public record Loop(double days, List<MinMaxEntry> ranges) {
     public static final Loop DEFAULT = new Loop(7, ImmutableList.of());
     public static final Codec<Loop> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            CodecUtils.getClampedDouble(1, Double.MAX_VALUE).optionalFieldOf("days", 7.0d).forGetter(Loop::getDays),
-            MinMaxEntry.CODEC.listOf().optionalFieldOf("ranges", ImmutableList.of()).forGetter(Loop::getRanges)
+            CodecUtils.getClampedDouble(1, Double.MAX_VALUE).optionalFieldOf("days", 7.0d).forGetter(Loop::days),
+            MinMaxEntry.CODEC.listOf().optionalFieldOf("ranges", ImmutableList.of()).forGetter(Loop::ranges)
     ).apply(instance, Loop::new));
-    private final double days;
-    private final List<MinMaxEntry> ranges;
-
-    public Loop(double days, List<MinMaxEntry> ranges) {
-        this.days = days;
-        this.ranges = ranges;
-    }
-
-    public double getDays() {
-        return days;
-    }
-
-    public List<MinMaxEntry> getRanges() {
-        return ranges;
-    }
 
     public static class Builder {
         private final List<MinMaxEntry> ranges = Lists.newArrayList();

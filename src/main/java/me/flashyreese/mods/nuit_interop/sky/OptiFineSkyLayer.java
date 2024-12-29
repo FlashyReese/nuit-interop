@@ -226,16 +226,16 @@ public class OptiFineSkyLayer {
         if (!this.fade.alwaysOn() && Utils.isInTimeInterval(timeOfDay, this.fade.endFadeOut(), this.fade.startFadeIn())) {
             return false;
         } else {
-            if (this.loop.getRanges() != null) {
+            if (this.loop.ranges() != null) {
                 long adjustedTime = timeOfDay - (long) this.fade.startFadeIn();
                 // Ensure adjustedTime is a non-negative value in the range of days
                 while (adjustedTime < 0L) {
-                    adjustedTime += 24000L * (int) this.loop.getDays();
+                    adjustedTime += 24000L * (int) this.loop.days();
                 }
 
                 int daysPassed = (int) (adjustedTime / 24000L);
-                int currentDay = daysPassed % (int) this.loop.getDays();
-                return Utils.checkRanges(currentDay, this.loop.getRanges(), false /* TODO: inverse? */);
+                int currentDay = daysPassed % (int) this.loop.days();
+                return Utils.checkRanges(currentDay, this.loop.ranges(), false /* TODO: inverse? */);
             }
 
             return true;
