@@ -1,6 +1,6 @@
-package me.flashyreese.mods.fabricskyboxes_interop.client.config;
+package me.flashyreese.mods.nuit_interop.client.config;
 
-import me.flashyreese.mods.fabricskyboxes_interop.FSBInterop;
+import me.flashyreese.mods.nuit_interop.NuitInterop;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -21,19 +21,19 @@ import java.util.Comparator;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-public class FSBInteropConfigScreen extends Screen {
+public class NuitInteropConfigScreen extends Screen {
     private final Screen parent;
-    private final FSBInteropConfig config;
-    private final Logger logger = LoggerFactory.getLogger("FSB-Interop");
+    private final NuitInteropConfig config;
+    private final Logger logger = LoggerFactory.getLogger("Nuit-Interop");
 
-    public FSBInteropConfigScreen(Screen parent, FSBInteropConfig config) {
+    public NuitInteropConfigScreen(Screen parent, NuitInteropConfig config) {
         super(Text.translatable(getTranslationKey("title")));
         this.parent = parent;
         this.config = config;
     }
 
     private static String getTranslationKey(String optionKey) {
-        return "options.fsb-interop." + optionKey;
+        return "options.nuit-interop." + optionKey;
     }
 
     private static String getTooltipKey(String translationKey) {
@@ -45,12 +45,12 @@ public class FSBInteropConfigScreen extends Screen {
         addDrawableChild(createBooleanOptionButton(this.width / 2 - 100 - 110, this.height / 2 - 10 - 60, 420, 20, "interoperability", value -> config.interoperability = value, () -> config.interoperability, () -> {
             MinecraftClient.getInstance().reloadResources();
         }));
-        addDrawableChild(createFSBInteropModeOptionButton(this.width / 2 - 100 - 110, this.height / 2 - 10 - 36, 420, 20, "mode", value -> config.mode = value, () -> config.mode, () -> {
+        addDrawableChild(createNuitInteropModeOptionButton(this.width / 2 - 100 - 110, this.height / 2 - 10 - 36, 420, 20, "mode", value -> config.mode = value, () -> config.mode, () -> {
             if (config.interoperability) {
                 MinecraftClient.getInstance().reloadResources();
             }
         }));
-        addDrawableChild(createBooleanOptionButton(this.width / 2 - 100 - 110, this.height / 2 - 10 - 12, 200, 20, "prefer_fsb_native", value -> config.preferFSBNative = value, () -> config.preferFSBNative, this::reloadResourcesIfInterop));
+        addDrawableChild(createBooleanOptionButton(this.width / 2 - 100 - 110, this.height / 2 - 10 - 12, 200, 20, "prefer_nuit_native", value -> config.preferNuitNative = value, () -> config.preferNuitNative, this::reloadResourcesIfInterop));
         addDrawableChild(createBooleanOptionButton(this.width / 2 - 100 + 110, this.height / 2 - 10 - 12, 200, 20, "debug_mode", value -> config.debugMode = value, () -> config.debugMode, () -> {
         }));
         addDrawableChild(createBooleanOptionButton(this.width / 2 - 100 - 110, this.height / 2 - 10 + 12, 200, 20, "process_optifine", value -> config.processOptiFine = value, () -> config.processOptiFine, this::reloadResourcesIfInterop));
@@ -59,12 +59,12 @@ public class FSBInteropConfigScreen extends Screen {
                 .builder(
                         Text.translatable(getTranslationKey("dump_data")),
                         button -> {
-                            Path path = FabricLoader.getInstance().getGameDir().resolve("fsb-interop-dump");
+                            Path path = FabricLoader.getInstance().getGameDir().resolve("nuit-interop-dump");
 
                             try {
                                 // Delete the directory and its contents recursively
                                 if (Files.exists(path)) {
-                                    if (FSBInteropConfig.INSTANCE.debugMode) {
+                                    if (NuitInteropConfig.INSTANCE.debugMode) {
                                         this.logger.info("Existing dump directory detected. Recursively deleting the contents...");
                                     }
                                     Files.walk(path)
@@ -72,7 +72,7 @@ public class FSBInteropConfigScreen extends Screen {
                                             .map(Path::toFile)
                                             .filter(File::delete)
                                             .forEach(file -> {
-                                                if (FSBInteropConfig.INSTANCE.debugMode) {
+                                                if (NuitInteropConfig.INSTANCE.debugMode) {
                                                     this.logger.info("Deleted: {}", file.getAbsolutePath());
                                                 }
                                             });
@@ -85,12 +85,12 @@ public class FSBInteropConfigScreen extends Screen {
                                 // Create the directory if it doesn't exist
                                 if (!Files.exists(path)) {
                                     Files.createDirectories(path);
-                                    if (FSBInteropConfig.INSTANCE.debugMode) {
+                                    if (NuitInteropConfig.INSTANCE.debugMode) {
                                         this.logger.info("Dump directory created: {}", path.toAbsolutePath());
                                     }
                                 }
 
-                                FSBInterop.getInstance()
+                                NuitInterop.getInstance()
                                         .getConvertedSkyMap()
                                         .forEach((identifier, json) -> {
                                             String filename = identifier.toString();
@@ -101,7 +101,7 @@ public class FSBInteropConfigScreen extends Screen {
                                             Path output = path.resolve(filename + ".json");
                                             try {
                                                 Files.write(output, json.getBytes());
-                                                if (FSBInteropConfig.INSTANCE.debugMode) {
+                                                if (NuitInteropConfig.INSTANCE.debugMode) {
                                                     this.logger.info("Successfully dumped {} to {}", identifier, output.toAbsolutePath());
                                                 }
                                             } catch (IOException e) {
@@ -110,7 +110,7 @@ public class FSBInteropConfigScreen extends Screen {
                                             }
                                         });
 
-                                if (FSBInteropConfig.INSTANCE.debugMode) {
+                                if (NuitInteropConfig.INSTANCE.debugMode) {
                                     this.logger.info("Opening dump directory: {}", path.toAbsolutePath());
                                 }
                                 Util.getOperatingSystem().open(path.toUri());
@@ -163,16 +163,16 @@ public class FSBInteropConfigScreen extends Screen {
         }).dimensions(x, y, width, height).tooltip(Tooltip.of(tooltipText)).build();
     }
 
-    private ButtonWidget createFSBInteropModeOptionButton(int x, int y, int width, int height, String key, Consumer<FSBInteropMode> consumer, Supplier<FSBInteropMode> supplier, Runnable onChange) {
+    private ButtonWidget createNuitInteropModeOptionButton(int x, int y, int width, int height, String key, Consumer<NuitInteropMode> consumer, Supplier<NuitInteropMode> supplier, Runnable onChange) {
         String translationKey = getTranslationKey(key);
         Text text = Text.translatable(translationKey);
         Text tooltipText = Text.translatable(getTooltipKey(translationKey));
         return ButtonWidget.builder(ScreenTexts.composeGenericOptionText(text, Text.translatable(getTranslationKey(supplier.get().getTranslationKey()))), button -> {
-            FSBInteropMode currentMode = supplier.get();
-            FSBInteropMode[] modes = FSBInteropMode.values();
+            NuitInteropMode currentMode = supplier.get();
+            NuitInteropMode[] modes = NuitInteropMode.values();
             int currentIndex = currentMode.ordinal();
             int nextIndex = (currentIndex + 1) % modes.length; // Wrap around to the beginning if reached the end
-            FSBInteropMode newValue = modes[nextIndex];
+            NuitInteropMode newValue = modes[nextIndex];
             button.setMessage(ScreenTexts.composeGenericOptionText(text, Text.translatable(getTranslationKey(newValue.getTranslationKey()))));
             consumer.accept(newValue);
             onChange.run();

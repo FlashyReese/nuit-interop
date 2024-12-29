@@ -1,14 +1,22 @@
-package me.flashyreese.mods.fabricskyboxes_interop.sky;
+package me.flashyreese.mods.nuit_interop.sky;
 
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import io.github.amerebagatelle.fabricskyboxes.util.Utils;
-import io.github.amerebagatelle.fabricskyboxes.util.object.*;
+import io.github.amerebagatelle.mods.nuit.components.Fade;
+import io.github.amerebagatelle.mods.nuit.components.MinMaxEntry;
+import io.github.amerebagatelle.mods.nuit.components.Weather;
+import io.github.amerebagatelle.mods.nuit.util.Utils;
+import me.flashyreese.mods.nuit_interop.utils.Loop;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.*;
+import net.minecraft.client.gl.ShaderProgramKeys;
+import net.minecraft.client.gl.VertexBuffer;
+import net.minecraft.client.render.Tessellator;
+import net.minecraft.client.render.VertexConsumer;
+import net.minecraft.client.render.VertexFormat;
+import net.minecraft.client.render.VertexFormats;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.Entity;
 import net.minecraft.registry.RegistryKeys;
@@ -18,10 +26,13 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.RotationAxis;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.Biome;
-import org.joml.*;
+import org.joml.Matrix4f;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
+import org.joml.Vector4f;
 
-import java.lang.Math;
 import java.util.List;
+import java.util.Map;
 
 public class OptiFineSkyLayer {
     private static final Codec<Vector3f> VEC_3_F = Codec.FLOAT.listOf().comapFlatMap((list) -> {
@@ -31,7 +42,7 @@ public class OptiFineSkyLayer {
         return DataResult.success(new Vector3f(list.get(0), list.get(1), list.get(2)));
     }, (vec) -> ImmutableList.of(vec.x(), vec.y(), vec.z()));
 
-    private static final Fade OPTIFINE_FADE = new Fade(0, 0, 0, 0, true);
+    private static final Fade OPTIFINE_FADE = new Fade(true, 0, Map.of());
 
     public static final Codec<OptiFineSkyLayer> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Identifier.CODEC.fieldOf("source").forGetter(OptiFineSkyLayer::getSource),
@@ -123,25 +134,28 @@ public class OptiFineSkyLayer {
     private void renderSide(MatrixStack matrixStackIn, Tessellator tess, int side) {
         float f = (float) (side % 3) / 3.0F;
         float f1 = (float) (side / 3) / 2.0F;
+        
         Matrix4f matrix4f = matrixStackIn.peek().getPositionMatrix();
-        RenderSystem.setShader(GameRenderer::getPositionTexProgram);
-        BufferBuilder bufferbuilder = tess.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_TEXTURE);
-        this.addVertex(matrix4f, bufferbuilder, -100.0F, -100.0F, -100.0F, f, f1);
-        this.addVertex(matrix4f, bufferbuilder, -100.0F, -100.0F, 100.0F, f, f1 + 0.5F);
-        this.addVertex(matrix4f, bufferbuilder, 100.0F, -100.0F, 100.0F, f + 0.33333334F, f1 + 0.5F);
-        this.addVertex(matrix4f, bufferbuilder, 100.0F, -100.0F, -100.0F, f + 0.33333334F, f1);
-        BufferRenderer.drawWithGlobalProgram(bufferbuilder.end());
+        RenderSystem.setShader(ShaderProgramKeys.POSITION_TEX);
+        VertexBuffer buffer = VertexBuffer.createAndUpload(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_TEXTURE, vertexConsumer -> {
+            this.addVertex(matrix4f, vertexConsumer, -100.0F, -100.0F, -100.0F, f, f1);
+            this.addVertex(matrix4f, vertexConsumer, -100.0F, -100.0F, 100.0F, f, f1 + 0.5F);
+            this.addVertex(matrix4f, vertexConsumer, 100.0F, -100.0F, 100.0F, f + 0.33333334F, f1 + 0.5F);
+            this.addVertex(matrix4f, vertexConsumer, 100.0F, -100.0F, -100.0F, f + 0.33333334F, f1);
+        });
+
+        buffer.bind();
+        buffer.draw(RenderSystem.getModelViewMatrix(), RenderSystem.getProjectionMatrix(), RenderSystem.getShader());
+        VertexBuffer.unbind();
     }
 
-    private void addVertex(Matrix4f matrix4f, BufferBuilder buffer, float x, float y, float z, float u, float v) {
+    private void addVertex(Matrix4f matrix4f, VertexConsumer vertexConsumer, float x, float y, float z, float u, float v) {
         Vector4f vector4f = matrix4f.transform(new Vector4f(x, y, z, 1.0F));
-        buffer.vertex(vector4f.x, vector4f.y, vector4f.z).texture(u, v);
+        vertexConsumer.vertex(vector4f.x, vector4f.y, vector4f.z).texture(u, v);
     }
-
 
     private float getAngle(World world, float skyAngle) {
         float angleDayStart = 0.0F;
-
         if (this.speed != (float) Math.round(this.speed)) {
             long currentWorldDay = (world.getTimeOfDay() + 18000L) / 24000L;
             double anglePerDay = this.speed % 1.0F;
@@ -155,26 +169,23 @@ public class OptiFineSkyLayer {
     private boolean getConditionCheck(World world) {
         MinecraftClient minecraftClient = MinecraftClient.getInstance();
         Entity cameraEntity = minecraftClient.getCameraEntity();
-
         if (cameraEntity == null) {
             return false;
         }
 
         BlockPos entityPos = cameraEntity.getBlockPos();
-
         if (!this.biomes.isEmpty()) {
             Biome currentBiome = world.getBiome(entityPos).value();
-
             if (currentBiome == null) {
                 return false;
             }
 
-            if (!(this.biomeInclusion && this.biomes.contains(world.getRegistryManager().get(RegistryKeys.BIOME).getId(currentBiome)))) {
+            if (!(this.biomeInclusion && this.biomes.contains(world.getRegistryManager().getOrThrow(RegistryKeys.BIOME).getId(currentBiome)))) {
                 return false;
             }
         }
 
-        return this.heights == null || Utils.checkRanges(entityPos.getY(), this.heights);
+        return this.heights == null || Utils.checkRanges(entityPos.getY(), this.heights, false);
     }
 
     private float getPositionBrightness(World world) {
@@ -194,7 +205,6 @@ public class OptiFineSkyLayer {
         float f = 1.0F - rainStrength;
         float f1 = rainStrength - thunderStrength;
         float weatherAlpha = 0.0F;
-
         if (this.weathers.contains(Weather.CLEAR)) {
             weatherAlpha += f;
         }
@@ -211,32 +221,34 @@ public class OptiFineSkyLayer {
     }
 
     private float getFadeAlpha(int timeOfDay) {
-        if (!this.fade.isAlwaysOn()) {
-            return Utils.calculateFadeAlphaValue(1.0F, 0.0F, timeOfDay, this.fade.getStartFadeIn(), this.fade.getEndFadeIn(), this.fade.getStartFadeOut(), this.fade.getEndFadeOut());
+        if (!this.fade.alwaysOn()) {
+            return 1.0F; // TODO
+//            return Utils.calculateFadeAlphaValue(1.0F, 0.0F, timeOfDay, this.fade.getStartFadeIn(), this.fade.getEndFadeIn(), this.fade.getStartFadeOut(), this.fade.getEndFadeOut());
+        } else {
+            return 1.0F;
         }
-        return 1.0F;
     }
 
     public boolean isActive(int timeOfDay) {
-        if (!this.fade.isAlwaysOn() && Utils.isInTimeInterval(timeOfDay, this.fade.getEndFadeOut(), this.fade.getStartFadeIn())) {
-            return false;
-        } else {
-            if (this.loop.getRanges() != null) {
-                long adjustedTime = timeOfDay - (long) this.fade.getStartFadeIn();
-
-                // Ensure adjustedTime is a non-negative value in the range of days
-                while (adjustedTime < 0L) {
-                    adjustedTime += 24000L * (int) this.loop.getDays();
-                }
-
-                int daysPassed = (int) (adjustedTime / 24000L);
-                int currentDay = daysPassed % (int) this.loop.getDays();
-
-                return Utils.checkRanges(currentDay, this.loop.getRanges());
-            }
-
-            return true;
-        }
+        return true; // TODO
+//        if (!this.fade.alwaysOn() && Utils.isInTimeInterval(timeOfDay, this.fade.getEndFadeOut(), this.fade.getStartFadeIn())) {
+//            return false;
+//        } else {
+//            if (this.loop.getRanges() != null) {
+//                long adjustedTime = timeOfDay - (long) this.fade.getStartFadeIn();
+//                // Ensure adjustedTime is a non-negative value in the range of days
+//                while (adjustedTime < 0L) {
+//                    adjustedTime += 24000L * (int) this.loop.getDays();
+//                }
+//
+//                int daysPassed = (int) (adjustedTime / 24000L);
+//                int currentDay = daysPassed % (int) this.loop.getDays();
+//
+//                return Utils.checkRanges(currentDay, this.loop.getRanges());
+//            }
+//
+//            return true;
+//        }
     }
 
     public Identifier getSource() {

@@ -1,4 +1,4 @@
-package me.flashyreese.mods.fabricskyboxes_interop.sky;
+package me.flashyreese.mods.nuit_interop.sky;
 
 import com.google.common.collect.ImmutableMap;
 import com.mojang.blaze3d.platform.GlStateManager;

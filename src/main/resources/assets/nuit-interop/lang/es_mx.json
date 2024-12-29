@@ -1,0 +1,15 @@
+{
+  "options.nuit-interop.title": "Configuración de Interoperabilidad de Nuit",
+  "options.nuit-interop.interoperability": "Interoperabilidad",
+  "options.nuit-interop.interoperability.tooltip": "Si está habilitado, el mod intentará leer/cargar cielos personalizados de MCPatcher/OptiFine.",
+  "options.nuit-interop.process_optifine": "Procesar OptiFine",
+  "options.nuit-interop.process_optifine.tooltip": "Si está habilitado, el mod intentará leer/cargar cielos personalizados de OptiFine.",
+  "options.nuit-interop.process_mcpatcher": "Procesar MCPatcher",
+  "options.nuit-interop.process_mcpatcher.tooltip": "Si está habilitado, el mod intentará leer/cargar cielos personalizados de MCPatcher.",
+  "options.nuit-interop.debug_mode": "Modo de depuración",
+  "options.nuit-interop.debug_mode.tooltip": "Si está habilitado, el mod mostrará los resultados de conversión y los registros de errores en el proceso de conversión.",
+  "options.nuit-interop.prefer_nuit_native": "Preferir Nuit Native",
+  "options.nuit-interop.prefer_nuit_native.tooltip": "Si está habilitado, el mod no procesará/convertirá MCPatcher/OptiFine si se detectan cielos de Nuit.",
+  "options.nuit-interop.dump_data": "Tirar datos",
+  "options.nuit-interop.dump_data.tooltip": "Tirar los cielos convertidos de Nuit Interop a \".minecraft/nuit-interop-dump\" y abrir el directorio. (Nota: El directorio original se eliminará.)"
+}

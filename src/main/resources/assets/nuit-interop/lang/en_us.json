@@ -1,0 +1,19 @@
+{
+  "options.nuit-interop.title": "Nuit Interop Configuration",
+  "options.nuit-interop.interoperability": "Interoperability",
+  "options.nuit-interop.interoperability.tooltip": "If enabled, the mod will attempt to read/load MCPatcher/OptiFine Custom Skies.",
+  "options.nuit-interop.mode": "Interop Mode",
+  "options.nuit-interop.mode.tooltip": "- Native: Uses a reimplementation of OptiFine.\n- Conversion: Converts OptiFine format to Nuit existing sky types.",
+  "options.nuit-interop.mode.native": "Native",
+  "options.nuit-interop.mode.conversion": "Conversion",
+  "options.nuit-interop.process_optifine": "Process OptiFine",
+  "options.nuit-interop.process_optifine.tooltip": "If enabled, the mod will attempt to read/load OptiFine Custom Skies.",
+  "options.nuit-interop.process_mcpatcher": "Process MCPatcher",
+  "options.nuit-interop.process_mcpatcher.tooltip": "If enabled, the mod will attempt to read/load MCPatcher Custom Skies.",
+  "options.nuit-interop.debug_mode": "Debug Mode",
+  "options.nuit-interop.debug_mode.tooltip": "If enabled, the mod will output conversion results and error logs in conversion process.",
+  "options.nuit-interop.prefer_nuit_native": "Prefer Nuit Native",
+  "options.nuit-interop.prefer_nuit_native.tooltip": "If enabled, the mod will not process/convert MCPatcher/OptiFine if Nuit skies are detected.",
+  "options.nuit-interop.dump_data": "Dump Data",
+  "options.nuit-interop.dump_data.tooltip": "Dump converted skies from Nuit Interop to \".minecraft/nuit-interop-dump\" and open the directory. (Note: The original directory will be deleted.)"
+}

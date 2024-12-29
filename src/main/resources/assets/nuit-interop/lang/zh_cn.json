@@ -1,0 +1,15 @@
+{
+  "options.nuit-interop.title": "Nuit Interop 配置",
+  "options.nuit-interop.interoperability": "总开关",
+  "options.nuit-interop.interoperability.tooltip": "若开启，此模组将尝试读取/加载 MCPatcher/OptiFine 自定义天空。",
+  "options.nuit-interop.process_optifine": "OptiFine 自定义天空",
+  "options.nuit-interop.process_optifine.tooltip": "若开启，此模组将尝试读取/加载 OptiFine 自定义天空。",
+  "options.nuit-interop.process_mcpatcher": "MCPatcher 自定义天空",
+  "options.nuit-interop.process_mcpatcher.tooltip": "若开启，此模组将尝试读取/加载 MCPatcher 自定义天空。",
+  "options.nuit-interop.debug_mode": "调试模式",
+  "options.nuit-interop.debug_mode.tooltip": "若开启，此模组会在转换过程中输出转换结果和错误日志。",
+  "options.nuit-interop.prefer_nuit_native": "优先使用 Nuit 天空",
+  "options.nuit-interop.prefer_nuit_native.tooltip": "若开启，如果检测到 Nuit 天空，此模组将不会处理/转换 MCPatcher/OptiFine 天空资源。",
+  "options.nuit-interop.dump_data": "转储天空数据",
+  "options.nuit-interop.dump_data.tooltip": "将 Nuit Interop 转换后的自定义天空数据转储于 \".minecraft/nuit-interop-dump\" 并打开相应目录。 (注：该目录先前存储的内容将被删除。)"
+}

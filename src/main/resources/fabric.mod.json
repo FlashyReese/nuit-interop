@@ -1,40 +1,40 @@
 {
-  "schemaVersion": 1,
-  "id": "fsb-interop",
-  "version": "${version}",
-  "name": "FabricSkyBoxes Interop",
-  "description": "FabricSkyBoxes Interoperability for MCPatcher/OptiFine Skies",
-  "authors": [
-    "FlashyReese"
-  ],
-  "contact": {},
-  "license": "MIT",
-  "icon": "assets/fsb-interop/icon.png",
-  "environment": "client",
-  "entrypoints": {
-    "modmenu": [
-      "me.flashyreese.mods.fabricskyboxes_interop.client.config.ModMenuApiImpl"
-    ]
-  },
-  "custom": {
-    "modmenu": {
-      "parent": "fabricskyboxes"
-    },
-    "links": {
-      "modmenu.curseforge": "https://curseforge.com/minecraft/mc-mods/fabricskyboxes-interop",
-      "modmenu.discord": "https://flashyreese.me/discord",
-      "modmenu.donate": "https://ko-fi.com/flashyreese",
-      "modmenu.github_releases": "https://github.com/FlashyReese/fabricskyboxes-interop/releases",
-      "modmenu.kofi": "https://ko-fi.com/flashyreese",
-      "modmenu.modrinth": "https://modrinth.com/mod/fabricskyboxes-interop"
-    }
-  },
-  "mixins": [
-    "fsb-interop.mixins.json"
-  ],
-  "depends": {
-    "fabricloader": ">=0.15",
-    "fabricskyboxes": ">=0.7",
-    "minecraft": ">=1.21"
-  }
+	"schemaVersion": 1,
+	"id": "nuit-interop",
+	"version": "${version}",
+	"name": "Nuit Interop",
+	"description": "Nuit Interoperability for MCPatcher/OptiFine Skies",
+	"authors": [
+		"FlashyReese"
+	],
+	"contact": {},
+	"license": "MIT",
+	"icon": "assets/nuit-interop/icon.png",
+	"environment": "client",
+	"entrypoints": {
+		"modmenu": [
+			"me.flashyreese.mods.nuit_interop.client.config.ModMenuApiImpl"
+		]
+	},
+	"custom": {
+		"modmenu": {
+			"parent": "nuit"
+		},
+		"links": {
+			"modmenu.curseforge": "https://curseforge.com/minecraft/mc-mods/fabricskyboxes-interop",
+			"modmenu.discord": "https://flashyreese.me/discord",
+			"modmenu.donate": "https://ko-fi.com/flashyreese",
+			"modmenu.github_releases": "https://github.com/FlashyReese/fabricskyboxes-interop/releases",
+			"modmenu.kofi": "https://ko-fi.com/flashyreese",
+			"modmenu.modrinth": "https://modrinth.com/mod/fabricskyboxes-interop"
+		}
+	},
+	"mixins": [
+		"nuit-interop.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.16",
+		"nuit": ">=1.0.1-snapshot+mc1.21.4-local",
+		"minecraft": ">=1.21.4"
+	}
 }

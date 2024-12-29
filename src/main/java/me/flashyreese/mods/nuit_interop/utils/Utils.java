@@ -1,8 +1,8 @@
-package me.flashyreese.mods.fabricskyboxes_interop.utils;
+package me.flashyreese.mods.nuit_interop.utils;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import io.github.amerebagatelle.fabricskyboxes.util.object.MinMaxEntry;
+import io.github.amerebagatelle.mods.nuit.components.MinMaxEntry;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.InvalidIdentifierException;
 
@@ -125,8 +125,8 @@ public final class Utils {
                 JsonArray jsonYRanges = new JsonArray();
                 minMaxEntries.forEach(minMaxEntry -> {
                     JsonObject minMax = new JsonObject();
-                    minMax.addProperty("min", minMaxEntry.getMin());
-                    minMax.addProperty("max", minMaxEntry.getMax());
+                    minMax.addProperty("min", minMaxEntry.min());
+                    minMax.addProperty("max", minMaxEntry.max());
                     jsonYRanges.add(minMax);
                 });
                 jsonObject.add("heights", jsonYRanges);
@@ -143,8 +143,8 @@ public final class Utils {
                 JsonArray loopRange = new JsonArray();
                 minMaxEntries.forEach(minMaxEntry -> {
                     JsonObject minMax = new JsonObject();
-                    minMax.addProperty("min", minMaxEntry.getMin());
-                    minMax.addProperty("max", minMaxEntry.getMax());
+                    minMax.addProperty("min", minMaxEntry.min());
+                    minMax.addProperty("max", minMaxEntry.max());
                     loopRange.add(minMax);
                 });
 

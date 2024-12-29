@@ -1,4 +1,4 @@
-package me.flashyreese.mods.fabricskyboxes_interop.utils;
+package me.flashyreese.mods.nuit_interop.utils;
 
 import net.minecraft.resource.Resource;
 import net.minecraft.resource.ResourceManager;
@@ -6,7 +6,6 @@ import net.minecraft.util.Identifier;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Collection;
 import java.util.Optional;
 import java.util.stream.Stream;
 

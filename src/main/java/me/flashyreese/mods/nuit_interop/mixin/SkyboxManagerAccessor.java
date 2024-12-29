@@ -1,7 +1,7 @@
-package me.flashyreese.mods.fabricskyboxes_interop.mixin;
+package me.flashyreese.mods.nuit_interop.mixin;
 
-import io.github.amerebagatelle.fabricskyboxes.SkyboxManager;
-import io.github.amerebagatelle.fabricskyboxes.skyboxes.AbstractSkybox;
+import io.github.amerebagatelle.mods.nuit.SkyboxManager;
+import io.github.amerebagatelle.mods.nuit.skybox.AbstractSkybox;
 import net.minecraft.util.Identifier;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
