@@ -4,8 +4,7 @@
 	"package": "me.flashyreese.mods.nuit_interop.mixin",
 	"compatibilityLevel": "JAVA_17",
 	"client": [
-		"MixinSkyboxResourceListener",
-		"SkyboxManagerAccessor"
+		"MixinSkyboxResourceListener"
 	],
 	"injectors": {
 		"defaultRequire": 1

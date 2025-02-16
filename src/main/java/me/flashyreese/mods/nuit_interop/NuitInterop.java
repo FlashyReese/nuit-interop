@@ -7,10 +7,9 @@ import com.google.gson.JsonObject;
 import com.mojang.serialization.JsonOps;
 import io.github.amerebagatelle.mods.nuit.SkyboxManager;
 import io.github.amerebagatelle.mods.nuit.api.skyboxes.Skybox;
-import io.github.amerebagatelle.mods.nuit.components.MinMaxEntry;
+import io.github.amerebagatelle.mods.nuit.components.RangeEntry;
 import me.flashyreese.mods.nuit_interop.client.config.NuitInteropConfig;
 import me.flashyreese.mods.nuit_interop.client.config.NuitInteropMode;
-import me.flashyreese.mods.nuit_interop.mixin.SkyboxManagerAccessor;
 import me.flashyreese.mods.nuit_interop.sky.OptiFineCustomSky;
 import me.flashyreese.mods.nuit_interop.utils.BlenderUtil;
 import me.flashyreese.mods.nuit_interop.utils.ResourceManagerHelper;
@@ -54,7 +53,7 @@ public class NuitInterop {
         this.convertedSkyMap.clear();
         if (NuitInteropConfig.INSTANCE.interoperability) {
             if (NuitInteropConfig.INSTANCE.preferNuitNative) {
-                if (!((SkyboxManagerAccessor) SkyboxManager.getInstance()).getSkyboxes().isEmpty()) {
+                if (!SkyboxManager.getInstance().getSkyboxMap().isEmpty()) {
                     this.logger.info("Nuit Native is preferred and existing skyboxes already detected! No longer converting MCP/OptiFine formats!");
                     return;
                 }
@@ -117,12 +116,12 @@ public class NuitInterop {
                         }
 
                         if (name.equals("moon_phases") || name.equals("sun")) {
+                            // TODO/NOTE: Support moon/sun
                             this.logger.info("Skipping {}, moon_phases/sun aren't supported!", id);
                             return;
                         }
 
                         this.logger.info("Converting {} to Nuit Format...", id);
-
                         InputStream inputStream = resourceManagerHelper.getInputStream(id);
                         if (inputStream == null) {
                             if (NuitInteropConfig.INSTANCE.debugMode) {
@@ -185,7 +184,6 @@ public class NuitInterop {
                 overworldJson.addProperty("type", "optifine-custom-sky");
                 overworldJson.add("layers", overworldLayers);
                 overworldJson.addProperty("world", "minecraft:overworld");
-
                 Skybox skybox = OptiFineCustomSky.CODEC.decode(JsonOps.INSTANCE, overworldJson).getOrThrow().getFirst();
                 SkyboxManager.getInstance().addSkybox(ResourceLocation.fromNamespaceAndPath("nuit-interop", "native-optifine-custom-sky-overworld"), skybox);
             }
@@ -196,7 +194,6 @@ public class NuitInterop {
                 endJson.addProperty("type", "optifine-custom-sky");
                 endJson.add("layers", endLayers);
                 endJson.addProperty("world", "minecraft:the_end");
-
                 Skybox skybox = OptiFineCustomSky.CODEC.decode(JsonOps.INSTANCE, endJson).getOrThrow().getFirst();
                 SkyboxManager.getInstance().addSkybox(ResourceLocation.fromNamespaceAndPath("nuit-interop", "native-optifine-custom-sky-end"), skybox);
             }
@@ -246,12 +243,14 @@ public class NuitInterop {
                 }
             }
         }
+
         try {
             textureId = ResourceLocation.fromNamespaceAndPath(namespace, path);
         } catch (ResourceLocationException e) {
             this.logger.error("Illegal character in namespaced identifier: {}", source);
             return;
         }
+
         InputStream textureInputStream = resourceManagerHelper.getInputStream(textureId);
         if (textureInputStream == null) {
             this.logger.error("Unable to find/read namespaced identifier: {}", textureId);
@@ -274,7 +273,6 @@ public class NuitInterop {
         json.add("blend", blend);
         json.add("properties", propertiesObject);
         json.add("conditions", conditionsObject);
-
         if (NuitInteropConfig.INSTANCE.debugMode) {
             this.logger.info("Output for {} conversion:\n{}", propertiesId, GSON.toJson(json));
         }
@@ -434,14 +432,15 @@ public class NuitInterop {
         int transitionDuration = Integer.parseInt(properties.getProperty("transition", "1")) * 20;
 
         // Properties Metadata
-        if (skyNumberString.equals(String.valueOf(skyNumber)))
+        if (skyNumberString.equals(String.valueOf(skyNumber))) {
             json.addProperty("priority", skyNumber);
+        }
+
         json.add("fade", fade);
         json.add("rotation", rotation);
         json.addProperty("transitionInDuration", transitionDuration);
         json.addProperty("transitionOutDuration", transitionDuration);
     }
-
 
     /**
      * Converts properties into conditions object
@@ -456,13 +455,12 @@ public class NuitInterop {
             String[] weathers = properties.getProperty("weather").split(" ");
             JsonArray jsonWeather = new JsonArray();
             if (weathers.length > 0) {
-                for (String weather : weathers) {
-                    jsonWeather.add(weather);
-                }
+                Arrays.stream(weathers).forEach(jsonWeather::add);
             } else {
                 jsonWeather.add("clear");
                 jsonWeather.add("snow");
             }
+
             json.add("weather", jsonWeather);
         } else {
             JsonArray jsonWeather = new JsonArray();
@@ -476,9 +474,7 @@ public class NuitInterop {
             String[] biomes = properties.getProperty("biomes").split(" ");
             if (biomes.length > 0) {
                 JsonArray jsonBiomes = new JsonArray();
-                for (String biome : biomes) {
-                    jsonBiomes.add(biome);
-                }
+                Arrays.stream(biomes).forEach(jsonBiomes::add);
                 json.add("biomes", jsonBiomes);
             }
         }
@@ -490,14 +486,13 @@ public class NuitInterop {
 
         // Heights -> yRanges
         if (properties.containsKey("heights")) {
-            List<MinMaxEntry> minMaxEntries = Utils.parseMinMaxEntriesNegative(properties.getProperty("heights"));
-
-            if (!minMaxEntries.isEmpty()) {
+            List<RangeEntry> rangeEntries = Utils.parseRangeEntriesNegative(properties.getProperty("heights"));
+            if (!rangeEntries.isEmpty()) {
                 JsonArray jsonYRanges = new JsonArray();
-                minMaxEntries.forEach(minMaxEntry -> {
+                rangeEntries.forEach(range -> {
                     JsonObject minMax = new JsonObject();
-                    minMax.addProperty("min", minMaxEntry.min());
-                    minMax.addProperty("max", minMaxEntry.max());
+                    minMax.addProperty("min", range.min());
+                    minMax.addProperty("max", range.max());
                     jsonYRanges.add(minMax);
                 });
                 json.add("yRanges", jsonYRanges);
@@ -506,16 +501,15 @@ public class NuitInterop {
 
         // Days Loop -> Loop
         if (properties.containsKey("days")) {
-            List<MinMaxEntry> minMaxEntries = Utils.parseMinMaxEntries(properties.getProperty("days"));
-
-            if (!minMaxEntries.isEmpty()) {
+            List<RangeEntry> rangeEntries = Utils.parseRangeEntries(properties.getProperty("days"));
+            if (!rangeEntries.isEmpty()) {
                 JsonObject loopObject = new JsonObject();
 
                 JsonArray loopRange = new JsonArray();
-                minMaxEntries.forEach(minMaxEntry -> {
+                rangeEntries.forEach(range -> {
                     JsonObject minMax = new JsonObject();
-                    minMax.addProperty("min", minMaxEntry.min());
-                    minMax.addProperty("max", minMaxEntry.max());
+                    minMax.addProperty("min", range.min());
+                    minMax.addProperty("max", range.max());
                     loopRange.add(minMax);
                 });
 

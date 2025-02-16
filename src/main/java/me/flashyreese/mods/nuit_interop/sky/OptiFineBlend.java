@@ -1,11 +1,10 @@
 package me.flashyreese.mods.nuit_interop.sky;
 
-import com.google.common.collect.ImmutableMap;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.serialization.Codec;
 
-import java.util.Map;
+import java.util.Arrays;
 import java.util.function.Consumer;
 
 public enum OptiFineBlend {
@@ -54,16 +53,7 @@ public enum OptiFineBlend {
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, alpha);
     });
 
-    private static final Map<String, OptiFineBlend> VALUES;
-    public static final Codec<OptiFineBlend> CODEC = Codec.STRING.xmap(OptiFineBlend::fromString, OptiFineBlend::toString);
-
-    static {
-        ImmutableMap.Builder<String, OptiFineBlend> builder = ImmutableMap.builder();
-        for (OptiFineBlend value : values()) {
-            builder.put(value.name, value);
-        }
-        VALUES = builder.build();
-    }
+    public static final Codec<OptiFineBlend> CODEC = Codec.STRING.xmap(OptiFineBlend::byName, OptiFineBlend::toString);
 
     private final String name;
     private final Consumer<Float> blendFunc;
@@ -73,12 +63,12 @@ public enum OptiFineBlend {
         this.blendFunc = blendFunc;
     }
 
-    public Consumer<Float> getBlendFunc() {
-        return blendFunc;
+    public void apply(float value) {
+        this.blendFunc.accept(value);
     }
 
-    public static OptiFineBlend fromString(String name) {
-        return VALUES.getOrDefault(name, ADD);
+    public static OptiFineBlend byName(String name) {
+        return Arrays.stream(OptiFineBlend.values()).filter(blend -> blend.toString().toLowerCase().equals(name)).findFirst().orElse(ADD);
     }
 
     @Override

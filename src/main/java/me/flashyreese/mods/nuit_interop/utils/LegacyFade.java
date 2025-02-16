@@ -2,7 +2,6 @@ package me.flashyreese.mods.nuit_interop.utils;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import io.github.amerebagatelle.mods.nuit.util.Utils;
 
 public record LegacyFade(int startFadeIn, int endFadeIn, int startFadeOut, int endFadeOut, boolean alwaysOn) {
     public static final LegacyFade DEFAULT = new LegacyFade(0, 0, 0, 0, false);

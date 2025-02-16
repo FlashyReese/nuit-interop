@@ -46,13 +46,11 @@ public class NuitInteropConfig {
 
         config.file = file;
         config.writeChanges();
-
         return config;
     }
 
     public void writeChanges() {
         File dir = this.file.getParentFile();
-
         if (!dir.exists()) {
             if (!dir.mkdirs()) {
                 throw new RuntimeException("Could not create parent directories");

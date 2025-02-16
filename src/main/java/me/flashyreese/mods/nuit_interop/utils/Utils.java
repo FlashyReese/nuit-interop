@@ -2,12 +2,16 @@ package me.flashyreese.mods.nuit_interop.utils;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import io.github.amerebagatelle.mods.nuit.components.MinMaxEntry;
+import com.mojang.serialization.Codec;
+import io.github.amerebagatelle.mods.nuit.NuitClient;
+import io.github.amerebagatelle.mods.nuit.components.RangeEntry;
 import net.minecraft.ResourceLocationException;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 
 import java.io.InputStream;
 import java.util.*;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 
 public final class Utils {
@@ -15,13 +19,12 @@ public final class Utils {
 
     public static JsonObject convertOptiFineSkyProperties(ResourceManagerHelper resourceManagerHelper, Properties properties, ResourceLocation propertiesResourceLocation) {
         JsonObject jsonObject = new JsonObject();
-
         ResourceLocation sourceTexture = parseSourceTexture(properties.getProperty("source", null), resourceManagerHelper, propertiesResourceLocation);
         if (sourceTexture == null) {
             return null;
+        } else {
+            jsonObject.addProperty("source", sourceTexture.toString());
         }
-
-        jsonObject.addProperty("source", sourceTexture.toString());
 
         // Blend
         if (properties.containsKey("blend")) {
@@ -34,22 +37,23 @@ public final class Utils {
         // Convert fade
         JsonObject fade = new JsonObject();
         if (properties.containsKey("startFadeIn") && properties.containsKey("endFadeIn") && properties.containsKey("endFadeOut")) {
-            int startFadeIn = Objects.requireNonNull(Utils.toTickTime(properties.getProperty("startFadeIn"))).intValue();
-            int endFadeIn = Objects.requireNonNull(Utils.toTickTime(properties.getProperty("endFadeIn"))).intValue();
-            int endFadeOut = Objects.requireNonNull(Utils.toTickTime(properties.getProperty("endFadeOut"))).intValue();
+            int startFadeIn = Objects.requireNonNull(toTickTime(properties.getProperty("startFadeIn"))).intValue();
+            int endFadeIn = Objects.requireNonNull(toTickTime(properties.getProperty("endFadeIn"))).intValue();
+            int endFadeOut = Objects.requireNonNull(toTickTime(properties.getProperty("endFadeOut"))).intValue();
             int startFadeOut;
             if (properties.containsKey("startFadeOut")) {
-                startFadeOut = Objects.requireNonNull(Utils.toTickTime(properties.getProperty("startFadeOut"))).intValue();
+                startFadeOut = Objects.requireNonNull(toTickTime(properties.getProperty("startFadeOut"))).intValue();
             } else {
                 startFadeOut = endFadeOut - (endFadeIn - startFadeIn);
                 if (startFadeIn <= startFadeOut && endFadeIn >= startFadeOut) {
                     startFadeOut = endFadeOut;
                 }
             }
-            fade.addProperty("startFadeIn", Utils.normalizeTickTime(startFadeIn));
-            fade.addProperty("endFadeIn", Utils.normalizeTickTime(endFadeIn));
-            fade.addProperty("startFadeOut", Utils.normalizeTickTime(startFadeOut));
-            fade.addProperty("endFadeOut", Utils.normalizeTickTime(endFadeOut));
+
+            fade.addProperty("startFadeIn", normalizeTickTime(startFadeIn));
+            fade.addProperty("endFadeIn", normalizeTickTime(endFadeIn));
+            fade.addProperty("startFadeOut", normalizeTickTime(startFadeOut));
+            fade.addProperty("endFadeOut", normalizeTickTime(endFadeOut));
         } else {
             fade.addProperty("alwaysOn", true);
         }
@@ -63,26 +67,27 @@ public final class Utils {
 
         // Rotation
         if (properties.containsKey("rotate")) {
-            boolean rotate = Boolean.parseBoolean(properties.getProperty("rotate", "true"));
-            jsonObject.addProperty("rotate", rotate);
+            jsonObject.addProperty("rotate", Boolean.parseBoolean(properties.getProperty("rotate", "true")));
         }
 
         // Transition
         if (properties.containsKey("transition")) {
-            int transition = Integer.parseInt(properties.getProperty("transition", "1"));
-            jsonObject.addProperty("transition", transition);
+            jsonObject.addProperty("transition", Integer.parseInt(properties.getProperty("transition", "1")));
         }
 
         // Axis
-        JsonArray jsonAxis = new JsonArray();
         if (properties.containsKey("axis")) {
             String[] axis = properties.getProperty("axis").trim().replaceAll(" +", " ").split(" ");
-            List<String> rev = Arrays.asList(axis);
-            axis = rev.toArray(axis);
-            for (String a : axis) {
-                jsonAxis.add(Float.parseFloat(a));
+            if (axis.length >= 3) {
+                float x = Float.parseFloat(axis[0]);
+                float y = Float.parseFloat(axis[1]);
+                float z = Float.parseFloat(axis[2]);
+                JsonArray axisArray = new JsonArray();
+                axisArray.add(z);
+                axisArray.add(y);
+                axisArray.add(-x);
+                jsonObject.add("axis", axisArray);
             }
-            jsonObject.add("axis", jsonAxis);
         }
 
         // Weather
@@ -90,12 +95,11 @@ public final class Utils {
             String[] weathers = properties.getProperty("weather").split(" ");
             JsonArray jsonWeather = new JsonArray();
             if (weathers.length > 0) {
-                for (String weather : weathers) {
-                    jsonWeather.add(weather);
-                }
+                Arrays.stream(weathers).forEach(jsonWeather::add);
             } else {
                 jsonWeather.add("clear");
             }
+
             jsonObject.add("weathers", jsonWeather);
         }
 
@@ -110,24 +114,21 @@ public final class Utils {
             String[] biomes = biomesString.split(" ");
             if (biomes.length > 0) {
                 JsonArray jsonBiomes = new JsonArray();
-                for (String biome : biomes) {
-                    jsonBiomes.add(biome);
-                }
+                Arrays.stream(biomes).filter(ResourceLocation::isValidPath).forEach(jsonBiomes::add);
                 jsonObject.add("biomes", jsonBiomes);
             }
         }
 
         // Heights
         if (properties.containsKey("heights")) {
-            List<MinMaxEntry> minMaxEntries = Utils.parseMinMaxEntriesNegative(properties.getProperty("heights"));
-
-            if (!minMaxEntries.isEmpty()) {
+            List<RangeEntry> rangeEntries = parseRangeEntriesNegative(properties.getProperty("heights"));
+            if (!rangeEntries.isEmpty()) {
                 JsonArray jsonYRanges = new JsonArray();
-                minMaxEntries.forEach(minMaxEntry -> {
-                    JsonObject minMax = new JsonObject();
-                    minMax.addProperty("min", minMaxEntry.min());
-                    minMax.addProperty("max", minMaxEntry.max());
-                    jsonYRanges.add(minMax);
+                rangeEntries.forEach(range -> {
+                    JsonObject rangeObj = new JsonObject();
+                    rangeObj.addProperty("min", range.min());
+                    rangeObj.addProperty("max", range.max());
+                    jsonYRanges.add(rangeObj);
                 });
                 jsonObject.add("heights", jsonYRanges);
             }
@@ -135,27 +136,24 @@ public final class Utils {
 
         // Days Loop -> Loop
         if (properties.containsKey("days")) {
-            List<MinMaxEntry> minMaxEntries = Utils.parseMinMaxEntries(properties.getProperty("days"));
-
-            if (!minMaxEntries.isEmpty()) {
+            List<RangeEntry> rangeEntries = parseRangeEntries(properties.getProperty("days"));
+            if (!rangeEntries.isEmpty()) {
                 JsonObject loopObject = new JsonObject();
-
                 JsonArray loopRange = new JsonArray();
-                minMaxEntries.forEach(minMaxEntry -> {
-                    JsonObject minMax = new JsonObject();
-                    minMax.addProperty("min", minMaxEntry.min());
-                    minMax.addProperty("max", minMaxEntry.max());
-                    loopRange.add(minMax);
+                rangeEntries.forEach(range -> {
+                    JsonObject rangeObj = new JsonObject();
+                    rangeObj.addProperty("min", range.min());
+                    rangeObj.addProperty("max", range.max());
+                    loopRange.add(rangeObj);
                 });
 
                 int value = 8;
                 if (properties.containsKey("daysLoop")) {
-                    value = Utils.parseInt(properties.getProperty("daysLoop"), 8);
+                    value = parseInt(properties.getProperty("daysLoop"), 8);
                 }
+
                 loopObject.addProperty("days", value);
-
                 loopObject.add("ranges", loopRange);
-
                 jsonObject.add("loop", loopObject);
             }
         }
@@ -191,6 +189,7 @@ public final class Utils {
                 }
             }
         }
+
         try {
             textureId = ResourceLocation.fromNamespaceAndPath(namespace, path);
         } catch (ResourceLocationException e) {
@@ -202,16 +201,23 @@ public final class Utils {
             return null;
         }
 
+        try {
+            textureInputStream.close();
+        } catch (Exception ignored) {
+        }
+
         return textureId;
     }
 
     public static Number toTickTime(String time) {
         String[] parts = time.split(":");
-        if (parts.length != 2)
+        if (parts.length == 2) {
+            int h = Integer.parseInt(parts[0]);
+            int m = Integer.parseInt(parts[1]);
+            return h * 1000 + (m / 0.06F) - 6000;
+        } else {
             return null;
-        int h = Integer.parseInt(parts[0]);
-        int m = Integer.parseInt(parts[1]);
-        return h * 1000 + (m / 0.06F) - 6000;
+        }
     }
 
     public static int normalizeTickTime(int tickTime) {
@@ -223,34 +229,34 @@ public final class Utils {
         return result;
     }
 
-    public static List<MinMaxEntry> parseMinMaxEntries(String str) {
-        List<MinMaxEntry> minMaxEntries = new ArrayList<>();
-        String[] strings = str.split(" ,");
-        for (String s : strings) {
-            MinMaxEntry minMaxEntry = parseMinMaxEntry(s);
-            if (minMaxEntry != null) {
-                minMaxEntries.add(minMaxEntry);
+    public static List<RangeEntry> parseRangeEntries(String source) {
+        List<RangeEntry> rangeEntries = new ArrayList<>();
+        String[] parts = source.trim().split(" ");
+        for (String part : parts) {
+            RangeEntry range = parseRangeEntry(part);
+            if (range != null) {
+                rangeEntries.add(range);
             }
         }
 
-        return minMaxEntries;
+        return rangeEntries;
     }
 
-    private static MinMaxEntry parseMinMaxEntry(String str) {
-        if (str != null) {
-            if (str.contains("-")) {
-                String[] strings = str.split("-");
-                if (strings.length == 2) {
-                    int min = parseInt(strings[0], -1);
-                    int max = parseInt(strings[1], -1);
+    private static RangeEntry parseRangeEntry(String part) {
+        if (part != null) {
+            if (part.contains("-")) {
+                String[] parts = part.split("-");
+                if (parts.length == 2) {
+                    int min = parseInt(parts[0], -1);
+                    int max = parseInt(parts[1], -1);
                     if (min >= 0 && max >= 0) {
-                        return new MinMaxEntry(min, max);
+                        return new RangeEntry(min, max);
                     }
                 }
             } else {
-                int value = parseInt(str, -1);
+                int value = parseInt(part, -1);
                 if (value >= 0) {
-                    return new MinMaxEntry(value, value);
+                    return new RangeEntry(value, value);
                 }
             }
         }
@@ -258,41 +264,72 @@ public final class Utils {
         return null;
     }
 
-    public static List<MinMaxEntry> parseMinMaxEntriesNegative(String str) {
-        List<MinMaxEntry> minMaxEntries = new ArrayList<>();
-        String[] strings = str.split(" ,");
-        for (String s : strings) {
-            MinMaxEntry minMaxEntry = parseMinMaxEntryNegative(s);
-            if (minMaxEntry != null) {
-                minMaxEntries.add(minMaxEntry);
+    public static List<RangeEntry> parseRangeEntriesNegative(String source) {
+        List<RangeEntry> rangeEntries = new ArrayList<>();
+        String[] parts = source.trim().split(" ");
+        for (String part : parts) {
+            RangeEntry range = parseRangeEntryNegative(part);
+            if (range != null) {
+                rangeEntries.add(range);
             }
         }
 
-        return minMaxEntries;
+        return rangeEntries;
     }
 
-    private static MinMaxEntry parseMinMaxEntryNegative(String str) {
-        if (str != null) {
-            String s = OPTIFINE_RANGE_SEPARATOR.matcher(str).replaceAll("$1=$2");
+    private static RangeEntry parseRangeEntryNegative(String part) {
+        if (part != null) {
+            String s = OPTIFINE_RANGE_SEPARATOR.matcher(part).replaceAll("$1=$2");
             if (s.contains("=")) {
-                String[] strings = s.split("=");
-                if (strings.length == 2) {
-                    int j = parseInt(stripBrackets(strings[0]), Integer.MIN_VALUE);
-                    int k = parseInt(stripBrackets(strings[1]), Integer.MIN_VALUE);
+                String[] parts = s.split("=");
+                if (parts.length == 2) {
+                    int j = parseInt(stripBrackets(parts[0]), Integer.MIN_VALUE);
+                    int k = parseInt(stripBrackets(parts[1]), Integer.MIN_VALUE);
                     if (j != Integer.MIN_VALUE && k != Integer.MIN_VALUE) {
                         int min = Math.min(j, k);
                         int max = Math.max(j, k);
-                        return new MinMaxEntry(min, max);
+                        return new RangeEntry(min, max);
                     }
                 }
             } else {
-                int i = parseInt(stripBrackets(str), Integer.MIN_VALUE);
+                int i = parseInt(stripBrackets(part), Integer.MIN_VALUE);
                 if (i != Integer.MIN_VALUE) {
-                    return new MinMaxEntry(i, i);
+                    return new RangeEntry(i, i);
                 }
             }
         }
+
         return null;
+    }
+
+    public static boolean isInTimeInterval(int currentTime, int startTime, int endTime) {
+        if (currentTime < 0 || currentTime >= 24000) {
+            throw new RuntimeException("Invalid current time, value must be between 0-23999: " + currentTime);
+        } else if (startTime <= endTime) {
+            return currentTime >= startTime && currentTime <= endTime;
+        } else {
+            return currentTime >= startTime || currentTime <= endTime;
+        }
+    }
+
+    public static float calculateFadeAlphaValue(float maxAlpha, float minAlpha, int currentTime, int startFadeIn, int endFadeIn, int startFadeOut, int endFadeOut) {
+        if (isInTimeInterval(currentTime, endFadeIn, startFadeOut)) {
+            return maxAlpha;
+        } else if (isInTimeInterval(currentTime, startFadeIn, endFadeIn)) {
+            int fadeInDuration = calculateCyclicTimeDistance(startFadeIn, endFadeIn);
+            int timePassedSinceFadeInStart = calculateCyclicTimeDistance(startFadeIn, currentTime);
+            return minAlpha + ((float) timePassedSinceFadeInStart / fadeInDuration) * (maxAlpha - minAlpha);
+        } else if (isInTimeInterval(currentTime, startFadeOut, endFadeOut)) {
+            int fadeOutDuration = calculateCyclicTimeDistance(startFadeOut, endFadeOut);
+            int timePassedSinceFadeOutStart = calculateCyclicTimeDistance(startFadeOut, currentTime);
+            return maxAlpha + ((float) timePassedSinceFadeOutStart / fadeOutDuration) * (minAlpha - maxAlpha);
+        } else {
+            return minAlpha;
+        }
+    }
+
+    public static int calculateCyclicTimeDistance(int startTime, int endTime) {
+        return (endTime - startTime + 24000) % 24000;
     }
 
     private static String stripBrackets(String str) {
@@ -304,6 +341,22 @@ public final class Utils {
             return Integer.parseInt(str);
         } catch (Exception e) {
             return defaultValue;
+        }
+    }
+
+    public static <T> T warnIfDifferent(T initialValue, T finalValue, String message) {
+        if (!initialValue.equals(finalValue) && NuitClient.config().generalSettings.debugMode) {
+            NuitClient.getLogger().warn(message);
+        }
+
+        return finalValue;
+    }
+
+    public static Codec<Double> getClampedDouble(double min, double max) {
+        if (min > max) {
+            throw new UnsupportedOperationException("Maximum value was lesser than than the minimum value");
+        } else {
+            return Codec.DOUBLE.xmap(f -> Mth.clamp(f, min, max), Function.identity());
         }
     }
 }
