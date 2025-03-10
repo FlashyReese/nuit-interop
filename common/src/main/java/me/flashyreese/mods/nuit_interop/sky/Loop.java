@@ -4,8 +4,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import io.github.amerebagatelle.mods.nuit.components.MinMaxEntry;
-import io.github.amerebagatelle.mods.nuit.util.CodecUtils;
+import io.github.amerebagatelle.mods.nuit.components.RangeEntry;
+import me.flashyreese.mods.nuit_interop.utils.Utils;
 
 import java.util.Collection;
 import java.util.List;
@@ -14,15 +14,15 @@ public class Loop {
     public static final Loop DEFAULT = new Loop(7.0, ImmutableList.of());
     public static final Codec<Loop> CODEC = RecordCodecBuilder.create(
             instance -> instance.group(
-                            CodecUtils.getClampedDouble(1.0, Double.MAX_VALUE).optionalFieldOf("days", 7.0).forGetter(Loop::getDays),
-                            MinMaxEntry.CODEC.listOf().optionalFieldOf("ranges", ImmutableList.of()).forGetter(Loop::getRanges)
+                            Utils.getClampedDouble(1.0, Double.MAX_VALUE).optionalFieldOf("days", 7.0).forGetter(Loop::getDays),
+                            RangeEntry.CODEC.listOf().optionalFieldOf("ranges", ImmutableList.of()).forGetter(Loop::getRanges)
                     )
                     .apply(instance, Loop::new)
     );
     private final double days;
-    private final List<MinMaxEntry> ranges;
+    private final List<RangeEntry> ranges;
 
-    public Loop(double days, List<MinMaxEntry> ranges) {
+    public Loop(double days, List<RangeEntry> ranges) {
         this.days = days;
         this.ranges = ranges;
     }
@@ -31,12 +31,12 @@ public class Loop {
         return this.days;
     }
 
-    public List<MinMaxEntry> getRanges() {
+    public List<RangeEntry> getRanges() {
         return this.ranges;
     }
 
     public static class Builder {
-        private final List<MinMaxEntry> ranges = Lists.newArrayList();
+        private final List<RangeEntry> ranges = Lists.newArrayList();
         private double days = 1.0;
 
         public Builder() {
@@ -47,7 +47,7 @@ public class Loop {
             return this;
         }
 
-        public Loop.Builder ranges(Collection<MinMaxEntry> worldIds) {
+        public Loop.Builder ranges(Collection<RangeEntry> worldIds) {
             this.ranges.addAll(worldIds);
             return this;
         }

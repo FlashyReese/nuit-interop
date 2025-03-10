@@ -2,7 +2,7 @@ package me.flashyreese.mods.nuit_interop.sky;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import io.github.amerebagatelle.mods.nuit.util.Utils;
+import me.flashyreese.mods.nuit_interop.utils.Utils;
 
 public class LegacyFade {
     public static final LegacyFade DEFAULT = new LegacyFade(0, 0, 0, 0, false);
@@ -34,7 +34,7 @@ public class LegacyFade {
         if (ignore) {
             return time;
         } else {
-            int normalized = Utils.normalizeTickTime(time);
+            int normalized = me.flashyreese.mods.nuit_interop.utils.Utils.normalizeTickTime(time);
             return Utils.warnIfDifferent(time, normalized, String.format("Provided time of %s has been normalized to %s", time, normalized));
         }
     }

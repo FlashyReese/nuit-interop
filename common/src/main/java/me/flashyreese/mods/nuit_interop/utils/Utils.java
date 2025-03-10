@@ -2,16 +2,66 @@ package me.flashyreese.mods.nuit_interop.utils;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import io.github.amerebagatelle.mods.nuit.components.MinMaxEntry;
+import com.mojang.serialization.Codec;
+import io.github.amerebagatelle.mods.nuit.NuitClient;
+import io.github.amerebagatelle.mods.nuit.components.RangeEntry;
 import net.minecraft.ResourceLocationException;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 
 import java.io.InputStream;
 import java.util.*;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 
 public final class Utils {
     private static final Pattern OPTIFINE_RANGE_SEPARATOR = Pattern.compile("(\\d|\\))-(\\d|\\()");
+
+    public static <T> T warnIfDifferent(T initialValue, T finalValue, String message) {
+        if (!initialValue.equals(finalValue) && NuitClient.config().generalSettings.debugMode) {
+            NuitClient.getLogger().warn(message);
+        }
+
+        return finalValue;
+    }
+
+    public static Codec<Double> getClampedDouble(double min, double max) {
+        if (min > max) {
+            throw new UnsupportedOperationException("Maximum value was lesser than than the minimum value");
+        } else {
+            return Codec.DOUBLE.xmap((f) -> Mth.clamp(f, min, max), Function.identity());
+        }
+    }
+
+    public static boolean isInTimeInterval(int currentTime, int startTime, int endTime) {
+        if (currentTime < 0 || currentTime >= 24000) {
+            throw new RuntimeException("Invalid current time, value must be between 0-23999: " + currentTime);
+        } else if (startTime <= endTime) {
+            return currentTime >= startTime && currentTime <= endTime;
+        } else {
+            return currentTime >= startTime || currentTime <= endTime;
+        }
+    }
+
+    public static float calculateFadeAlphaValue(float maxAlpha, float minAlpha, int currentTime, int startFadeIn, int endFadeIn, int startFadeOut, int endFadeOut) {
+        if (isInTimeInterval(currentTime, endFadeIn, startFadeOut)) {
+            return maxAlpha;
+        } else if (isInTimeInterval(currentTime, startFadeIn, endFadeIn)) {
+            int fadeInDuration = calculateCyclicTimeDistance(startFadeIn, endFadeIn);
+            int timePassedSinceFadeInStart = calculateCyclicTimeDistance(startFadeIn, currentTime);
+            return minAlpha + ((float) timePassedSinceFadeInStart / fadeInDuration) * (maxAlpha - minAlpha);
+        } else if (isInTimeInterval(currentTime, startFadeOut, endFadeOut)) {
+            int fadeOutDuration = calculateCyclicTimeDistance(startFadeOut, endFadeOut);
+            int timePassedSinceFadeOutStart = calculateCyclicTimeDistance(startFadeOut, currentTime);
+            return maxAlpha + ((float) timePassedSinceFadeOutStart / fadeOutDuration) * (minAlpha - maxAlpha);
+        } else {
+            return minAlpha;
+        }
+    }
+
+    public static int calculateCyclicTimeDistance(int startTime, int endTime) {
+        return (endTime - startTime + 24000) % 24000;
+    }
 
     public static JsonObject convertOptiFineSkyProperties(ResourceManagerHelper resourceManagerHelper, Properties properties, ResourceLocation propertiesIdentifier) {
         JsonObject jsonObject = new JsonObject();
@@ -121,7 +171,7 @@ public final class Utils {
 
         // Heights
         if (properties.containsKey("heights")) {
-            List<MinMaxEntry> minMaxEntries = Utils.parseMinMaxEntriesNegative(properties.getProperty("heights"));
+            List<RangeEntry> minMaxEntries = Utils.parseMinMaxEntriesNegative(properties.getProperty("heights"));
 
             if (!minMaxEntries.isEmpty()) {
                 JsonArray jsonYRanges = new JsonArray();
@@ -137,7 +187,7 @@ public final class Utils {
 
         // Days Loop -> Loop
         if (properties.containsKey("days")) {
-            List<MinMaxEntry> minMaxEntries = Utils.parseMinMaxEntries(properties.getProperty("days"));
+            List<RangeEntry> minMaxEntries = Utils.parseMinMaxEntries(properties.getProperty("days"));
 
             if (!minMaxEntries.isEmpty()) {
                 JsonObject loopObject = new JsonObject();
@@ -194,7 +244,7 @@ public final class Utils {
             }
         }
         try {
-            textureId = new ResourceLocation(namespace, path);
+            textureId = ResourceLocation.tryBuild(namespace, path);
         } catch (ResourceLocationException e) {
             return null;
         }
@@ -222,12 +272,12 @@ public final class Utils {
         return result;
     }
 
-    public static List<MinMaxEntry> parseMinMaxEntries(String str) {
-        List<MinMaxEntry> minMaxEntries = new ArrayList<>();
+    public static List<RangeEntry> parseMinMaxEntries(String str) {
+        List<RangeEntry> minMaxEntries = new ArrayList<>();
         String[] strings = str.split(" ,");
 
         for (String s : strings) {
-            MinMaxEntry minMaxEntry = parseMinMaxEntry(s);
+            RangeEntry minMaxEntry = parseMinMaxEntry(s);
 
             if (minMaxEntry != null) {
                 minMaxEntries.add(minMaxEntry);
@@ -237,7 +287,7 @@ public final class Utils {
         return minMaxEntries;
     }
 
-    private static MinMaxEntry parseMinMaxEntry(String str) {
+    private static RangeEntry parseMinMaxEntry(String str) {
         if (str != null) {
             if (str.contains("-")) {
                 String[] strings = str.split("-");
@@ -245,14 +295,14 @@ public final class Utils {
                     int min = parseInt(strings[0], -1);
                     int max = parseInt(strings[1], -1);
                     if (min >= 0 && max >= 0) {
-                        return new MinMaxEntry(min, max);
+                        return new RangeEntry(min, max);
                     }
                 }
             } else {
                 int value = parseInt(str, -1);
 
                 if (value >= 0) {
-                    return new MinMaxEntry(value, value);
+                    return new RangeEntry(value, value);
                 }
             }
         }
@@ -260,12 +310,12 @@ public final class Utils {
         return null;
     }
 
-    public static List<MinMaxEntry> parseMinMaxEntriesNegative(String str) {
-        List<MinMaxEntry> minMaxEntries = new ArrayList<>();
+    public static List<RangeEntry> parseMinMaxEntriesNegative(String str) {
+        List<RangeEntry> minMaxEntries = new ArrayList<>();
         String[] strings = str.split(" ,");
 
         for (String s : strings) {
-            MinMaxEntry minMaxEntry = parseMinMaxEntryNegative(s);
+            RangeEntry minMaxEntry = parseMinMaxEntryNegative(s);
 
             if (minMaxEntry != null) {
                 minMaxEntries.add(minMaxEntry);
@@ -275,7 +325,7 @@ public final class Utils {
         return minMaxEntries;
     }
 
-    private static MinMaxEntry parseMinMaxEntryNegative(String str) {
+    private static RangeEntry parseMinMaxEntryNegative(String str) {
         if (str != null) {
             String s = OPTIFINE_RANGE_SEPARATOR.matcher(str).replaceAll("$1=$2");
 
@@ -289,14 +339,14 @@ public final class Utils {
                     if (j != Integer.MIN_VALUE && k != Integer.MIN_VALUE) {
                         int min = Math.min(j, k);
                         int max = Math.max(j, k);
-                        return new MinMaxEntry(min, max);
+                        return new RangeEntry(min, max);
                     }
                 }
             } else {
                 int i = parseInt(stripBrackets(str), Integer.MIN_VALUE);
 
                 if (i != Integer.MIN_VALUE) {
-                    return new MinMaxEntry(i, i);
+                    return new RangeEntry(i, i);
                 }
             }
         }

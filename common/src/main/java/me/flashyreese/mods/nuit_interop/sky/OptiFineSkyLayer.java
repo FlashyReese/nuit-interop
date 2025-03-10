@@ -8,11 +8,11 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.github.amerebagatelle.mods.nuit.components.Condition;
-import io.github.amerebagatelle.mods.nuit.components.MinMaxEntry;
+import io.github.amerebagatelle.mods.nuit.components.RangeEntry;
 import io.github.amerebagatelle.mods.nuit.components.Weather;
 import io.github.amerebagatelle.mods.nuit.util.Utils;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.CoreShaders;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
@@ -21,7 +21,6 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
 import org.joml.Matrix4f;
-import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
 
@@ -40,7 +39,7 @@ public class OptiFineSkyLayer {
     public static final Codec<OptiFineSkyLayer> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ResourceLocation.CODEC.fieldOf("source").forGetter(OptiFineSkyLayer::getSource),
             Condition.create(ResourceLocation.CODEC).optionalFieldOf("biomes", Condition.of()).forGetter(OptiFineSkyLayer::getBiomes),
-            MinMaxEntry.CODEC.listOf().optionalFieldOf("heights", ImmutableList.of()).forGetter(OptiFineSkyLayer::getHeights),
+            RangeEntry.CODEC.listOf().optionalFieldOf("heights", ImmutableList.of()).forGetter(OptiFineSkyLayer::getHeights),
             OptiFineBlend.CODEC.optionalFieldOf("blend", OptiFineBlend.ADD).forGetter(OptiFineSkyLayer::getBlend),
             LegacyFade.CODEC.optionalFieldOf("fade", OPTIFINE_FADE).forGetter(OptiFineSkyLayer::getFade),
             Codec.BOOL.optionalFieldOf("rotate", false).forGetter(OptiFineSkyLayer::isRotate),
@@ -53,7 +52,7 @@ public class OptiFineSkyLayer {
 
     private final ResourceLocation source;
     private final Condition<ResourceLocation> biomes;
-    private final List<MinMaxEntry> heights;
+    private final List<RangeEntry> heights;
     private final OptiFineBlend blend;
     private final LegacyFade fade;
     private final boolean rotate;
@@ -64,7 +63,7 @@ public class OptiFineSkyLayer {
     private final List<Weather> weathers;
     public float conditionAlpha = -1;
 
-    public OptiFineSkyLayer(ResourceLocation source, Condition<ResourceLocation> biomes, List<MinMaxEntry> heights, OptiFineBlend blend, LegacyFade fade, boolean rotate, float speed, Vector3f axis, Loop loop, float transition, List<Weather> weathers) {
+    public OptiFineSkyLayer(ResourceLocation source, Condition<ResourceLocation> biomes, List<RangeEntry> heights, OptiFineBlend blend, LegacyFade fade, boolean rotate, float speed, Vector3f axis, Loop loop, float transition, List<Weather> weathers) {
         this.source = source;
         this.biomes = biomes;
         this.heights = heights;
@@ -82,64 +81,56 @@ public class OptiFineSkyLayer {
         this.conditionAlpha = this.getPositionBrightness(world);
     }
 
-    public void render(Level world, PoseStack matrixStack, int timeOfDay, float skyAngle, float rainGradient, float thunderGradient) {
+    public void render(Level level, PoseStack poseStack, int timeOfDay, float skyAngle, float rainGradient, float thunderGradient) {
         float weatherAlpha = this.getWeatherAlpha(rainGradient, thunderGradient);
         float fadeAlpha = this.getFadeAlpha(timeOfDay);
         float finalAlpha = Mth.clamp(this.conditionAlpha * weatherAlpha * fadeAlpha, 0.0F, 1.0F);
-
         if (!(finalAlpha < 1.0E-4F)) {
+            RenderSystem.setShader(CoreShaders.POSITION_TEX);
             RenderSystem.setShaderTexture(0, this.source);
             this.blend.getBlendFunc().accept(finalAlpha);
-            matrixStack.pushPose();
-
+            poseStack.pushPose();
             if (this.rotate) {
-                float angle = getAngle(world, skyAngle);
-                Quaternionf rotation = new Quaternionf();
-                rotation.rotationAxis(angle, this.axis);
-                matrixStack.mulPose(rotation);
+                poseStack.mulPose(Axis.of(this.axis).rotationDegrees(this.getAngle(level, skyAngle)));
             }
 
-            Tesselator tessellator = Tesselator.getInstance();
-            matrixStack.mulPose(Axis.XP.rotationDegrees(90.0F));
-            matrixStack.mulPose(Axis.ZP.rotationDegrees(-90.0F));
-            this.renderSide(matrixStack, tessellator, 4);
-            matrixStack.pushPose();
-            matrixStack.mulPose(Axis.XP.rotationDegrees(90.0F));
-            this.renderSide(matrixStack, tessellator, 1);
-            matrixStack.popPose();
-            matrixStack.pushPose();
-            matrixStack.mulPose(Axis.XP.rotationDegrees(-90.0F));
-            this.renderSide(matrixStack, tessellator, 0);
-            matrixStack.popPose();
-            matrixStack.mulPose(Axis.ZP.rotationDegrees(90.0F));
-            this.renderSide(matrixStack, tessellator, 5);
-            matrixStack.mulPose(Axis.ZP.rotationDegrees(90.0F));
-            this.renderSide(matrixStack, tessellator, 2);
-            matrixStack.mulPose(Axis.ZP.rotationDegrees(90.0F));
-            this.renderSide(matrixStack, tessellator, 3);
-            matrixStack.popPose();
+            BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
+            poseStack.mulPose(Axis.XP.rotationDegrees(90.0F));
+            poseStack.mulPose(Axis.ZP.rotationDegrees(-90.0F));
+            this.renderSide(poseStack, builder, 4);
+            poseStack.pushPose();
+            poseStack.mulPose(Axis.XP.rotationDegrees(90.0F));
+            this.renderSide(poseStack, builder, 1);
+            poseStack.popPose();
+            poseStack.pushPose();
+            poseStack.mulPose(Axis.XP.rotationDegrees(-90.0F));
+            this.renderSide(poseStack, builder, 0);
+            poseStack.popPose();
+            poseStack.mulPose(Axis.ZP.rotationDegrees(90.0F));
+            this.renderSide(poseStack, builder, 5);
+            poseStack.mulPose(Axis.ZP.rotationDegrees(90.0F));
+            this.renderSide(poseStack, builder, 2);
+            poseStack.mulPose(Axis.ZP.rotationDegrees(90.0F));
+            this.renderSide(poseStack, builder, 3);
+            poseStack.popPose();
+            BufferUploader.drawWithShader(builder.buildOrThrow());
         }
     }
 
-    private void renderSide(PoseStack matrixStackIn, Tesselator tess, int side) {
-        BufferBuilder bufferbuilder = tess.getBuilder();
+    private void renderSide(PoseStack poseStack, BufferBuilder builder, int side) {
         float f = (float) (side % 3) / 3.0F;
         float f1 = (float) (side / 3) / 2.0F;
-        Matrix4f matrix4f = matrixStackIn.last().pose();
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
-        bufferbuilder.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
-        this.addVertex(matrix4f, bufferbuilder, -100.0F, -100.0F, -100.0F, f, f1);
-        this.addVertex(matrix4f, bufferbuilder, -100.0F, -100.0F, 100.0F, f, f1 + 0.5F);
-        this.addVertex(matrix4f, bufferbuilder, 100.0F, -100.0F, 100.0F, f + 0.33333334F, f1 + 0.5F);
-        this.addVertex(matrix4f, bufferbuilder, 100.0F, -100.0F, -100.0F, f + 0.33333334F, f1);
-        tess.end();
+        Matrix4f matrix4f = poseStack.last().pose();
+        this.addVertex(matrix4f, builder, -100.0F, -100.0F, -100.0F, f, f1);
+        this.addVertex(matrix4f, builder, -100.0F, -100.0F, 100.0F, f, f1 + 0.5F);
+        this.addVertex(matrix4f, builder, 100.0F, -100.0F, 100.0F, f + 0.33333334F, f1 + 0.5F);
+        this.addVertex(matrix4f, builder, 100.0F, -100.0F, -100.0F, f + 0.33333334F, f1);
     }
 
-    private void addVertex(Matrix4f matrix4f, BufferBuilder buffer, float x, float y, float z, float u, float v) {
+    private void addVertex(Matrix4f matrix4f, VertexConsumer vertexConsumer, float x, float y, float z, float u, float v) {
         Vector4f vector4f = matrix4f.transform(new Vector4f(x, y, z, 1.0F));
-        buffer.vertex(vector4f.x, vector4f.y, vector4f.z).uv(u, v).endVertex();
+        vertexConsumer.addVertex(vector4f.x, vector4f.y, vector4f.z).setUv(u, v);
     }
-
 
     private float getAngle(Level world, float skyAngle) {
         float angleDayStart = 0.0F;
@@ -164,10 +155,10 @@ public class OptiFineSkyLayer {
 
         BlockPos entityPos = cameraEntity.blockPosition();
 
-        if (!this.biomes.getEntries().isEmpty()) {
+        if (!this.biomes.entries().isEmpty()) {
             Biome currentBiome = world.getBiome(entityPos).value();
 
-            if (this.biomes.isExcludes() == this.biomes.getEntries().contains(world.registryAccess().registryOrThrow(Registries.BIOME).getKey(currentBiome))) {
+            if (this.biomes.excludes() == this.biomes.entries().contains(world.registryAccess().lookupOrThrow(Registries.BIOME).getKey(currentBiome))) {
                 return false;
             }
         }
@@ -176,7 +167,7 @@ public class OptiFineSkyLayer {
     }
 
     private float getPositionBrightness(Level world) {
-        if (this.biomes.getEntries().isEmpty() && this.heights.isEmpty()) {
+        if (this.biomes.entries().isEmpty() && this.heights.isEmpty()) {
             return 1.0F;
         }
 
@@ -210,13 +201,13 @@ public class OptiFineSkyLayer {
 
     private float getFadeAlpha(int timeOfDay) {
         if (!this.fade.isAlwaysOn()) {
-            return Utils.calculateFadeAlphaValue(1.0F, 0.0F, timeOfDay, this.fade.getStartFadeIn(), this.fade.getEndFadeIn(), this.fade.getStartFadeOut(), this.fade.getEndFadeOut());
+            return me.flashyreese.mods.nuit_interop.utils.Utils.calculateFadeAlphaValue(1.0F, 0.0F, timeOfDay, this.fade.getStartFadeIn(), this.fade.getEndFadeIn(), this.fade.getStartFadeOut(), this.fade.getEndFadeOut());
         }
         return 1.0F;
     }
 
     public boolean isActive(int timeOfDay) {
-        if (!this.fade.isAlwaysOn() && Utils.isInTimeInterval(timeOfDay, this.fade.getEndFadeOut(), this.fade.getStartFadeIn())) {
+        if (!this.fade.isAlwaysOn() && me.flashyreese.mods.nuit_interop.utils.Utils.isInTimeInterval(timeOfDay, this.fade.getEndFadeOut(), this.fade.getStartFadeIn())) {
             return false;
         } else {
             if (this.loop.getRanges() != null) {
@@ -245,7 +236,7 @@ public class OptiFineSkyLayer {
         return biomes;
     }
 
-    public List<MinMaxEntry> getHeights() {
+    public List<RangeEntry> getHeights() {
         return heights;
     }
 

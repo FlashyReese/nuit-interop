@@ -42,7 +42,7 @@ dependencies {
 
     modImplementation "io.github.amerebagatelle.mods:nuit-fabric:$rootProject.nuit_version"
 
-    modImplementation('com.terraformersmc:modmenu:10.0.0-beta.1') {
+    modImplementation('com.terraformersmc:modmenu:13.0.2') {
         exclude group: 'net.fabricmc.fabric-api'
     }
 
