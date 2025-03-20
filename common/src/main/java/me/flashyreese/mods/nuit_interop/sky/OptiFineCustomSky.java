@@ -16,17 +16,10 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.*;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.util.ARGB;
-import net.minecraft.util.Mth;
-import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.material.FogType;
 import org.joml.Matrix4f;
-import org.joml.Matrix4fStack;
 
 import java.util.List;
-import java.util.Objects;
 
 public class OptiFineCustomSky implements Skybox {
     public static final Codec<OptiFineCustomSky> CODEC = RecordCodecBuilder.create(instance -> instance.group(
@@ -78,124 +71,40 @@ public class OptiFineCustomSky implements Skybox {
 
     public void renderSky(SkyRendererAccessor skyRendererAccessor, PoseStack poseStack, float tickDelta, Camera camera, MultiBufferSource.BufferSource bufferSource, FogParameters fogParameters) {
         Minecraft minecraft = Minecraft.getInstance();
-        Entity entity = camera.getEntity();
-        ClientLevel level = Objects.requireNonNull((ClientLevel) entity.level());
-        FogType cameraSubmersionType = camera.getFluidInCamera();
-        if (cameraSubmersionType != FogType.POWDER_SNOW && cameraSubmersionType != FogType.LAVA && !(this.hasBlindnessOrDarkness(camera))) {
-            if (level.effects().skyType() == DimensionSpecialEffects.SkyType.END) {
-                this.renderEndSky(poseStack, level);
-            } else if (level.effects().skyType() != DimensionSpecialEffects.SkyType.OVERWORLD) {
-                return;
-            }
-
-            int skyColor = level.getSkyColor(minecraft.gameRenderer.getMainCamera().getPosition(), tickDelta);
+        ClientLevel level = Minecraft.getInstance().level;
+        DimensionSpecialEffects dimensionSpecialEffects = level.effects();
+        DimensionSpecialEffects.SkyType skyType = dimensionSpecialEffects.skyType();
+        RenderSystem.setShaderFog(fogParameters);
+        if (skyType == DimensionSpecialEffects.SkyType.END) {
+            this.renderEndSky(poseStack, level);
+        } else {
+            float sunAngle = level.getSunAngle(tickDelta);
             float timeOfDay = level.getTimeOfDay(tickDelta);
             float rainLevel = 1.0F - level.getRainLevel(tickDelta);
+            float starBrightness = level.getStarBrightness(tickDelta) * rainLevel;
+            int sunriseOrSunsetColor = dimensionSpecialEffects.getSunriseOrSunsetColor(timeOfDay);
             int moonPhase = level.getMoonPhase();
-
-            RenderSystem.depthMask(false);
-            RenderSystem.setShaderFog(fogParameters);
-            RenderSystem.setShaderColor(ARGB.redFloat(skyColor), ARGB.greenFloat(skyColor), ARGB.blueFloat(skyColor), 1.0F);
-            skyRendererAccessor.getTopSkyBuffer().bind();
-            skyRendererAccessor.getTopSkyBuffer().drawWithShader(RenderSystem.getModelViewStack(), RenderSystem.getProjectionMatrix(), RenderSystem.getShader());
-            VertexBuffer.unbind();
-            RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-
-            RenderSystem.enableBlend();
-            int sunriseOrSunsetColor = level.effects().getSunriseOrSunsetColor(level.getTimeOfDay(tickDelta));
-            if (sunriseOrSunsetColor != -1) {
-                RenderSystem.setShader(CoreShaders.POSITION_COLOR);
-                RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-                poseStack.pushPose();
-                poseStack.mulPose(Axis.XP.rotationDegrees(90.0F));
-                float i = Mth.sin(level.getSunAngle(tickDelta)) < 0.0F ? 180.0F : 0.0F;
-                poseStack.mulPose(Axis.ZP.rotationDegrees(i));
-                poseStack.mulPose(Axis.ZP.rotationDegrees(90.0F));
-                float sunriseOrSunsetA = ARGB.blueFloat(sunriseOrSunsetColor);
-                Matrix4f matrix4f = poseStack.last().pose();
-                BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.TRIANGLE_FAN, DefaultVertexFormat.POSITION_COLOR);
-                builder.addVertex(matrix4f, 0.0F, 100.0F, 0.0F).setColor(sunriseOrSunsetColor);
-                for (int n = 0; n <= 16; ++n) {
-                    float o = (float) n * (float) (Math.PI * 2) / 16.0F;
-                    float p = Mth.sin(o);
-                    float q = Mth.cos(o);
-                    builder.addVertex(matrix4f, p * 120.0F, q * 120.0F, -q * 40.0F * sunriseOrSunsetA).setColor(ARGB.color(sunriseOrSunsetColor, 0));
-                }
-                BufferUploader.drawWithShader(builder.buildOrThrow());
-                poseStack.popPose();
+            int skyColor = level.getSkyColor(minecraft.gameRenderer.getMainCamera().getPosition(), tickDelta);
+            ((SkyRenderer) skyRendererAccessor).renderSkyDisc(ARGB.redFloat(skyColor), ARGB.greenFloat(skyColor), ARGB.blueFloat(skyColor));
+            if (dimensionSpecialEffects.isSunriseOrSunset(timeOfDay)) {
+                ((SkyRenderer) skyRendererAccessor).renderSunriseAndSunset(poseStack, bufferSource, sunAngle, sunriseOrSunsetColor);
             }
 
+            // Render Sky Layers
             RenderSystem.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
-
             poseStack.pushPose();
             RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, rainLevel);
             poseStack.mulPose(Axis.YP.rotationDegrees(-90.0F));
             this.render(poseStack, level, tickDelta);
             poseStack.mulPose(Axis.XP.rotationDegrees(timeOfDay * 360.0F));
-            Matrix4f matrix4f2 = poseStack.last().pose();
-
-            RenderSystem.setShader(CoreShaders.POSITION_TEX);
-            {
-                RenderSystem.setShaderTexture(0, SkyRendererAccessor.getSun());
-                BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
-                final float sunSize = 30.0F;
-                builder.addVertex(matrix4f2, -sunSize, 100.0F, -sunSize).setUv(0.0F, 0.0F);
-                builder.addVertex(matrix4f2, sunSize, 100.0F, -sunSize).setUv(1.0F, 0.0F);
-                builder.addVertex(matrix4f2, sunSize, 100.0F, sunSize).setUv(1.0F, 1.0F);
-                builder.addVertex(matrix4f2, -sunSize, 100.0F, sunSize).setUv(0.0F, 1.0F);
-                BufferUploader.drawWithShader(builder.buildOrThrow());
-            }
-
-            {
-                int s = moonPhase % 4;
-                int m = moonPhase / 4 % 2;
-                float t = (float) (s) / 4.0F;
-                float o = (float) (m) / 2.0F;
-                float p = (float) (s + 1) / 4.0F;
-                float q = (float) (m + 1) / 2.0F;
-                RenderSystem.setShaderTexture(0, SkyRendererAccessor.getMoonPhases());
-                BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
-                final float moonSize = 20.0F;
-                builder.addVertex(matrix4f2, -moonSize, -100.0F, moonSize).setUv(p, q);
-                builder.addVertex(matrix4f2, moonSize, -100.0F, moonSize).setUv(t, q);
-                builder.addVertex(matrix4f2, moonSize, -100.0F, -moonSize).setUv(t, o);
-                builder.addVertex(matrix4f2, -moonSize, -100.0F, -moonSize).setUv(p, o);
-                BufferUploader.drawWithShader(builder.buildOrThrow());
-            }
-
-            float starBrightness = level.getStarBrightness(tickDelta) * rainLevel;
-            if (starBrightness > 0.0F) {
-                Matrix4fStack matrix4fStack = RenderSystem.getModelViewStack();
-                matrix4fStack.pushMatrix();
-                matrix4fStack.mul(poseStack.last().pose());
-                RenderSystem.setShaderColor(starBrightness, starBrightness, starBrightness, starBrightness);
-                RenderSystem.setShaderFog(FogParameters.NO_FOG);
-                skyRendererAccessor.getStarsBuffer().bind();
-                skyRendererAccessor.getStarsBuffer().drawWithShader(RenderSystem.getModelViewStack(), RenderSystem.getProjectionMatrix(), RenderSystem.getShader());
-                VertexBuffer.unbind();
-                RenderSystem.setShaderFog(fogParameters);
-                RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-                matrix4fStack.popMatrix();
-            }
-
-            RenderSystem.disableBlend();
-            RenderSystem.defaultBlendFunc();
             poseStack.popPose();
-            double eyeDepth = entity.getEyePosition(tickDelta).y - level.getLevelData().getHorizonHeight(level);
-            if (eyeDepth < 0.0) {
+            //
+
+            ((SkyRenderer) skyRendererAccessor).renderSunMoonAndStars(poseStack, bufferSource, timeOfDay, moonPhase, rainLevel, starBrightness, fogParameters);
+            bufferSource.endBatch();
+            if (minecraft.player.getEyePosition(tickDelta).y - level.getLevelData().getHorizonHeight(level) < 0.0) {
                 ((SkyRenderer) skyRendererAccessor).renderDarkDisc(poseStack);
             }
-
-            RenderSystem.depthMask(true);
-        }
-    }
-
-    private boolean hasBlindnessOrDarkness(Camera camera) {
-        Entity entity = camera.getEntity();
-        if (entity instanceof LivingEntity livingEntity) {
-            return livingEntity.hasEffect(MobEffects.BLINDNESS) || livingEntity.hasEffect(MobEffects.DARKNESS);
-        } else {
-            return false;
         }
     }
 
