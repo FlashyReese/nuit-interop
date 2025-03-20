@@ -5,7 +5,6 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import me.flashyreese.mods.nuit_interop.utils.Utils;
 
 public class LegacyFade {
-    public static final LegacyFade DEFAULT = new LegacyFade(0, 0, 0, 0, false);
     public static final Codec<LegacyFade> CODEC = RecordCodecBuilder.create(
             instance -> instance.group(
                             Codec.INT.optionalFieldOf("startFadeIn", 0).forGetter(LegacyFade::getStartFadeIn),

@@ -1,13 +1,11 @@
 package me.flashyreese.mods.nuit_interop.sky;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.github.amerebagatelle.mods.nuit.components.RangeEntry;
 import me.flashyreese.mods.nuit_interop.utils.Utils;
 
-import java.util.Collection;
 import java.util.List;
 
 public class Loop {
@@ -33,27 +31,5 @@ public class Loop {
 
     public List<RangeEntry> getRanges() {
         return this.ranges;
-    }
-
-    public static class Builder {
-        private final List<RangeEntry> ranges = Lists.newArrayList();
-        private double days = 1.0;
-
-        public Builder() {
-        }
-
-        public Loop.Builder days(double days) {
-            this.days = days;
-            return this;
-        }
-
-        public Loop.Builder ranges(Collection<RangeEntry> worldIds) {
-            this.ranges.addAll(worldIds);
-            return this;
-        }
-
-        public Loop build() {
-            return new Loop(this.days, this.ranges);
-        }
     }
 }
