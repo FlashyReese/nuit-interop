@@ -7,13 +7,13 @@ import com.mojang.math.Axis;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import io.github.amerebagatelle.mods.nuit.components.Condition;
 import io.github.amerebagatelle.mods.nuit.components.RangeEntry;
 import io.github.amerebagatelle.mods.nuit.components.Weather;
 import io.github.amerebagatelle.mods.nuit.util.Utils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.CoreShaders;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
@@ -30,15 +30,17 @@ public class OptiFineSkyLayer {
     private static final Codec<Vector3f> VEC_3_F = Codec.FLOAT.listOf().comapFlatMap((list) -> {
         if (list.size() < 3) {
             return DataResult.error(() -> "Incomplete number of elements in vector");
+        } else {
+            return DataResult.success(new Vector3f(list.get(0), list.get(1), list.get(2)));
         }
-        return DataResult.success(new Vector3f(list.get(0), list.get(1), list.get(2)));
     }, (vec) -> ImmutableList.of(vec.x(), vec.y(), vec.z()));
 
     private static final LegacyFade OPTIFINE_FADE = new LegacyFade(0, 0, 0, 0, true);
 
     public static final Codec<OptiFineSkyLayer> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             ResourceLocation.CODEC.fieldOf("source").forGetter(OptiFineSkyLayer::getSource),
-            Condition.create(ResourceLocation.CODEC).optionalFieldOf("biomes", Condition.of()).forGetter(OptiFineSkyLayer::getBiomes),
+            Codec.BOOL.optionalFieldOf("biomeInclusion", true).forGetter(OptiFineSkyLayer::isBiomeInclusion),
+            ResourceLocation.CODEC.listOf().optionalFieldOf("biomes", ImmutableList.of()).forGetter(OptiFineSkyLayer::getBiomes),
             RangeEntry.CODEC.listOf().optionalFieldOf("heights", ImmutableList.of()).forGetter(OptiFineSkyLayer::getHeights),
             OptiFineBlend.CODEC.optionalFieldOf("blend", OptiFineBlend.ADD).forGetter(OptiFineSkyLayer::getBlend),
             LegacyFade.CODEC.optionalFieldOf("fade", OPTIFINE_FADE).forGetter(OptiFineSkyLayer::getFade),
@@ -47,11 +49,12 @@ public class OptiFineSkyLayer {
             VEC_3_F.optionalFieldOf("axis", new Vector3f(1, 0, 0)).forGetter(OptiFineSkyLayer::getAxis),
             Loop.CODEC.optionalFieldOf("loop", Loop.DEFAULT).forGetter(OptiFineSkyLayer::getLoop),
             Codec.FLOAT.optionalFieldOf("transition", 1.0F).forGetter(OptiFineSkyLayer::getTransition),
-            Weather.CODEC.listOf().optionalFieldOf("weathers", ImmutableList.of(Weather.CLEAR)).forGetter(OptiFineSkyLayer::getWeathers)
+            Weather.CODEC.listOf().optionalFieldOf("weathers", ImmutableList.of(Weather.NO_PRECIPITATION)).forGetter(OptiFineSkyLayer::getWeathers)
     ).apply(instance, OptiFineSkyLayer::new));
 
     private final ResourceLocation source;
-    private final Condition<ResourceLocation> biomes;
+    private final boolean biomeInclusion;
+    private final List<ResourceLocation> biomes;
     private final List<RangeEntry> heights;
     private final OptiFineBlend blend;
     private final LegacyFade fade;
@@ -63,8 +66,9 @@ public class OptiFineSkyLayer {
     private final List<Weather> weathers;
     public float conditionAlpha = -1;
 
-    public OptiFineSkyLayer(ResourceLocation source, Condition<ResourceLocation> biomes, List<RangeEntry> heights, OptiFineBlend blend, LegacyFade fade, boolean rotate, float speed, Vector3f axis, Loop loop, float transition, List<Weather> weathers) {
+    public OptiFineSkyLayer(ResourceLocation source, boolean biomeInclusion, List<ResourceLocation> biomes, List<RangeEntry> heights, OptiFineBlend blend, LegacyFade fade, boolean rotate, float speed, Vector3f axis, Loop loop, float transition, List<Weather> weathers) {
         this.source = source;
+        this.biomeInclusion = biomeInclusion;
         this.biomes = biomes;
         this.heights = heights;
         this.blend = blend;
@@ -77,8 +81,8 @@ public class OptiFineSkyLayer {
         this.weathers = weathers;
     }
 
-    public void tick(Level world) {
-        this.conditionAlpha = this.getPositionBrightness(world);
+    public void tick(Level level) {
+        this.conditionAlpha = this.getPositionBrightness(level);
     }
 
     public void render(Level level, PoseStack poseStack, int timeOfDay, float skyAngle, float rainGradient, float thunderGradient) {
@@ -132,33 +136,33 @@ public class OptiFineSkyLayer {
         vertexConsumer.addVertex(vector4f.x, vector4f.y, vector4f.z).setUv(u, v);
     }
 
-    private float getAngle(Level world, float skyAngle) {
+    private float getAngle(Level level, float skyAngle) {
         float angleDayStart = 0.0F;
-
         if (this.speed != (float) Math.round(this.speed)) {
-            long currentWorldDay = (world.getDayTime() + 18000L) / 24000L;
+            long currentWorldDay = (level.dayTime() + 18000L) / 24000L;
             double anglePerDay = this.speed % 1.0F;
             double currentAngle = (double) currentWorldDay * anglePerDay;
             angleDayStart = (float) (currentAngle % 1.0D);
         }
 
-        return (-360.0F * (angleDayStart + skyAngle * this.speed)) * (float) Math.PI / 180.0F;
+        return (-360.0F * (angleDayStart + skyAngle * this.speed));
     }
 
-    private boolean getConditionCheck(Level world) {
+    private boolean getConditionCheck(Level level) {
         Minecraft minecraftClient = Minecraft.getInstance();
         Entity cameraEntity = minecraftClient.getCameraEntity();
-
         if (cameraEntity == null) {
             return false;
         }
 
-        BlockPos entityPos = cameraEntity.blockPosition();
+        BlockPos entityPos = cameraEntity.getOnPos();
+        if (!this.biomes.isEmpty()) {
+            Holder<Biome> currentBiome = level.getBiome(entityPos);
+            if (!currentBiome.isBound()) {
+                return false;
+            }
 
-        if (!this.biomes.entries().isEmpty()) {
-            Biome currentBiome = world.getBiome(entityPos).value();
-
-            if (this.biomes.excludes() == this.biomes.entries().contains(world.registryAccess().lookupOrThrow(Registries.BIOME).getKey(currentBiome))) {
+            if (!(this.biomeInclusion && this.biomes.contains(level.registryAccess().lookupOrThrow(Registries.BIOME).getId(currentBiome.value())))) {
                 return false;
             }
         }
@@ -167,7 +171,7 @@ public class OptiFineSkyLayer {
     }
 
     private float getPositionBrightness(Level world) {
-        if (this.biomes.entries().isEmpty() && this.heights.isEmpty()) {
+        if (this.biomes.isEmpty() && this.heights.isEmpty()) {
             return 1.0F;
         }
 
@@ -183,16 +187,15 @@ public class OptiFineSkyLayer {
         float f = 1.0F - rainStrength;
         float f1 = rainStrength - thunderStrength;
         float weatherAlpha = 0.0F;
-
-        if (this.weathers.contains(Weather.CLEAR)) {
+        if (this.weathers.contains(Weather.NO_PRECIPITATION)) {
             weatherAlpha += f;
         }
 
-        if (this.weathers.contains(Weather.RAIN)) {
+        if (this.weathers.contains(Weather.WORLD_PRECIPITATION)) {
             weatherAlpha += f1;
         }
 
-        if (this.weathers.contains(Weather.THUNDER)) {
+        if (this.weathers.contains(Weather.WORLD_THUNDERSTORM)) {
             weatherAlpha += thunderStrength;
         }
 
@@ -202,17 +205,17 @@ public class OptiFineSkyLayer {
     private float getFadeAlpha(int timeOfDay) {
         if (!this.fade.isAlwaysOn()) {
             return me.flashyreese.mods.nuit_interop.utils.Utils.calculateFadeAlphaValue(1.0F, 0.0F, timeOfDay, this.fade.getStartFadeIn(), this.fade.getEndFadeIn(), this.fade.getStartFadeOut(), this.fade.getEndFadeOut());
+        } else {
+            return 1.0F;
         }
-        return 1.0F;
     }
 
-    public boolean isActive(int timeOfDay) {
-        if (!this.fade.isAlwaysOn() && me.flashyreese.mods.nuit_interop.utils.Utils.isInTimeInterval(timeOfDay, this.fade.getEndFadeOut(), this.fade.getStartFadeIn())) {
+    public boolean isActive(long timeOfDay, int clampedTimeOfDay) {
+        if (!this.fade.isAlwaysOn() && me.flashyreese.mods.nuit_interop.utils.Utils.isInTimeInterval(clampedTimeOfDay, this.fade.getEndFadeOut(), this.fade.getStartFadeIn())) {
             return false;
         } else {
             if (this.loop.getRanges() != null) {
                 long adjustedTime = timeOfDay - (long) this.fade.getStartFadeIn();
-
                 // Ensure adjustedTime is a non-negative value in the range of days
                 while (adjustedTime < 0L) {
                     adjustedTime += 24000L * (int) this.loop.getDays();
@@ -220,7 +223,6 @@ public class OptiFineSkyLayer {
 
                 int daysPassed = (int) (adjustedTime / 24000L);
                 int currentDay = daysPassed % (int) this.loop.getDays();
-
                 return Utils.checkRanges(currentDay, this.loop.getRanges(), false);
             }
 
@@ -232,7 +234,11 @@ public class OptiFineSkyLayer {
         return source;
     }
 
-    public Condition<ResourceLocation> getBiomes() {
+    public boolean isBiomeInclusion() {
+        return biomeInclusion;
+    }
+
+    public List<ResourceLocation> getBiomes() {
         return biomes;
     }
 

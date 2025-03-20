@@ -5,8 +5,8 @@ import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.serialization.Codec;
 
+import java.util.Arrays;
 import java.util.Map;
-import java.util.Objects;
 import java.util.function.Consumer;
 
 public enum OptiFineBlend {
@@ -55,8 +55,8 @@ public enum OptiFineBlend {
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, alpha);
     });
 
+    public static final Codec<OptiFineBlend> CODEC = Codec.STRING.xmap(OptiFineBlend::byName, OptiFineBlend::toString);
     private static final Map<String, OptiFineBlend> VALUES;
-    public static final Codec<OptiFineBlend> CODEC = Codec.STRING.xmap(OptiFineBlend::fromString, OptiFineBlend::toString);
 
     static {
         ImmutableMap.Builder<String, OptiFineBlend> builder = ImmutableMap.builder();
@@ -74,8 +74,8 @@ public enum OptiFineBlend {
         this.blendFunc = blendFunc;
     }
 
-    public static OptiFineBlend fromString(String name) {
-        return Objects.requireNonNull(VALUES.get(name));
+    public static OptiFineBlend byName(String name) {
+        return Arrays.stream(OptiFineBlend.values()).filter(blend -> blend.toString().toLowerCase().equals(name)).findFirst().orElse(ADD);
     }
 
     public String getName() {

@@ -31,20 +31,16 @@ import java.util.Objects;
 public class OptiFineCustomSky implements Skybox {
     public static final Codec<OptiFineCustomSky> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             OptiFineSkyLayer.CODEC.listOf().optionalFieldOf("layers", ImmutableList.of()).forGetter(OptiFineCustomSky::getLayers),
-            Level.RESOURCE_KEY_CODEC.fieldOf("world").forGetter(OptiFineCustomSky::getWorldIdentifier)
+            Level.RESOURCE_KEY_CODEC.fieldOf("world").forGetter(OptiFineCustomSky::getWorldResourceKey)
     ).apply(instance, OptiFineCustomSky::new));
 
     private final List<OptiFineSkyLayer> layers;
-    private final ResourceKey<Level> worldIdentifier;
-
-    private final Minecraft client = Minecraft.getInstance();
-    private ClientLevel world = client.level;
-
+    private final ResourceKey<Level> worldResourceKey;
     private boolean active = true;
 
-    public OptiFineCustomSky(List<OptiFineSkyLayer> layers, ResourceKey<Level> worldIdentifier) {
+    public OptiFineCustomSky(List<OptiFineSkyLayer> layers, ResourceKey<Level> worldResourceKey) {
         this.layers = layers;
-        this.worldIdentifier = worldIdentifier;
+        this.worldResourceKey = worldResourceKey;
     }
 
     @Override
@@ -55,29 +51,26 @@ public class OptiFineCustomSky implements Skybox {
     private void renderEndSky(PoseStack poseStack, ClientLevel level) {
         RenderSystem.enableBlend();
         RenderSystem.depthMask(false);
-        RenderSystem.setShader(CoreShaders.POSITION_TEX_COLOR);
-        RenderSystem.setShaderTexture(0, SkyRenderer.END_SKY_LOCATION);
+        BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+        Matrix4f matrix4f = poseStack.last().pose();
         for (int i = 0; i < 6; ++i) {
-            poseStack.pushPose();
             switch (i) {
-                case 1 -> poseStack.mulPose(Axis.XP.rotationDegrees(90.0f));
-                case 2 -> poseStack.mulPose(Axis.XP.rotationDegrees(-90.0f));
-                case 3 -> poseStack.mulPose(Axis.XP.rotationDegrees(180.0f));
-                case 4 -> poseStack.mulPose(Axis.ZP.rotationDegrees(90.0f));
-                case 5 -> poseStack.mulPose(Axis.ZP.rotationDegrees(-90.0f));
+                case 1 -> matrix4f.rotationX(1.5707964F);
+                case 2 -> matrix4f.rotationX(-1.5707964F);
+                case 3 -> matrix4f.rotationX(3.1415927F);
+                case 4 -> matrix4f.rotationZ(1.5707964F);
+                case 5 -> matrix4f.rotationZ(-1.5707964F);
             }
 
-            Matrix4f matrix4f = poseStack.last().pose();
-            BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
             int color = ARGB.color(255, 40, 40, 40);
             builder.addVertex(matrix4f, -100.0F, -100.0F, -100.0F).setUv(0.0F, 0.0F).setColor(color);
             builder.addVertex(matrix4f, -100.0F, -100.0F, 100.0F).setUv(0.0F, 16.0F).setColor(color);
             builder.addVertex(matrix4f, 100.0F, -100.0F, 100.0F).setUv(16.0F, 16.0F).setColor(color);
             builder.addVertex(matrix4f, 100.0F, -100.0F, -100.0F).setUv(16.0F, 0.0F).setColor(color);
-            BufferUploader.drawWithShader(builder.buildOrThrow());
-            poseStack.popPose();
         }
-
+        RenderSystem.setShader(CoreShaders.POSITION_TEX_COLOR);
+        RenderSystem.setShaderTexture(0, SkyRenderer.END_SKY_LOCATION);
+        BufferUploader.drawWithShader(builder.buildOrThrow());
         this.render(poseStack, level, 0.0F);
         RenderSystem.depthMask(true);
         RenderSystem.disableBlend();
@@ -201,38 +194,38 @@ public class OptiFineCustomSky implements Skybox {
         Entity entity = camera.getEntity();
         if (entity instanceof LivingEntity livingEntity) {
             return livingEntity.hasEffect(MobEffects.BLINDNESS) || livingEntity.hasEffect(MobEffects.DARKNESS);
+        } else {
+            return false;
         }
-        return false;
     }
 
-    private void render(PoseStack matrixStack, Level world, float tickDelta) {
-        int timeOfDay = (int) (world.getDayTime() % 24000L);
-        float skyAngle = world.getTimeOfDay(tickDelta);
-        float rainGradient = world.getRainLevel(tickDelta);
-        float thunderGradient = world.getThunderLevel(tickDelta);
-
+    private void render(PoseStack poseStack, Level level, float tickDelta) {
+        long timeOfDay = level.getDayTime();
+        int clampedTimeOfDay = (int) (timeOfDay % 24000L);
+        float skyAngle = level.getTimeOfDay(tickDelta);
+        float rainGradient = level.getRainLevel(tickDelta);
+        float thunderGradient = level.getThunderLevel(tickDelta);
         if (rainGradient > 0.0F) {
             thunderGradient /= rainGradient;
         }
 
         for (OptiFineSkyLayer optiFineSkyLayer : this.layers) {
-            if (optiFineSkyLayer.isActive(timeOfDay)) {
-                optiFineSkyLayer.render(world, matrixStack, timeOfDay, skyAngle, rainGradient, thunderGradient);
+            if (optiFineSkyLayer.isActive(timeOfDay, clampedTimeOfDay)) {
+                optiFineSkyLayer.render(level, poseStack, clampedTimeOfDay, skyAngle, rainGradient, thunderGradient);
             }
         }
 
-        float f3 = 1.0F - rainGradient;
-        OptiFineBlend.ADD.getBlendFunc().accept(f3);
+        OptiFineBlend.ADD.getBlendFunc().accept(1.0F - rainGradient);
     }
 
     @Override
-    public void tick(ClientLevel clientWorld) {
+    public void tick(ClientLevel clientLevel) {
         this.active = true;
-        if (clientWorld.dimension() != this.worldIdentifier) {
+        if (clientLevel.dimension() != this.worldResourceKey) {
             this.layers.forEach(layer -> layer.setConditionAlpha(-1.0F));
             this.active = false;
         } else {
-            this.layers.forEach(layer -> layer.tick(clientWorld));
+            this.layers.forEach(layer -> layer.tick(clientLevel));
         }
     }
 
@@ -245,7 +238,7 @@ public class OptiFineCustomSky implements Skybox {
         return layers;
     }
 
-    public ResourceKey<Level> getWorldIdentifier() {
-        return worldIdentifier;
+    public ResourceKey<Level> getWorldResourceKey() {
+        return worldResourceKey;
     }
 }

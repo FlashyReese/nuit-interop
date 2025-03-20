@@ -22,6 +22,7 @@ public class NuitInteropConfig {
             .create();
 
     public static final NuitInteropConfig INSTANCE = NuitInteropConfig.load(Minecraft.getInstance().gameDirectory.toPath().resolve("config").resolve("nuit-interop.json").toFile());
+    public NuitInteropMode mode = NuitInteropMode.NATIVE;
     public boolean interoperability = true;
     public boolean debugMode = true;
     public boolean preferNuitNative = true;
@@ -45,13 +46,11 @@ public class NuitInteropConfig {
 
         config.file = file;
         config.writeChanges();
-
         return config;
     }
 
     public void writeChanges() {
         File dir = this.file.getParentFile();
-
         if (!dir.exists()) {
             if (!dir.mkdirs()) {
                 throw new RuntimeException("Could not create parent directories");
