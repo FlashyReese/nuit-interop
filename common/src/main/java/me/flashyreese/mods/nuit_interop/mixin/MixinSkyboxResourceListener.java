@@ -1,6 +1,6 @@
 package me.flashyreese.mods.nuit_interop.mixin;
 
-import io.github.amerebagatelle.mods.nuit.resource.SkyboxResourceListener;
+import me.flashyreese.mods.nuit.resource.SkyboxResourceListener;
 import me.flashyreese.mods.nuit_interop.NuitInterop;
 import net.minecraft.server.packs.resources.ResourceManager;
 import org.spongepowered.asm.mixin.Mixin;

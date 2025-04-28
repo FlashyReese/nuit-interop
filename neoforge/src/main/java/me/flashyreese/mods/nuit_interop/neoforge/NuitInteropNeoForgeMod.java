@@ -11,6 +11,7 @@ import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 @Mod(NuitInterop.MOD_ID)
 public final class NuitInteropNeoForgeMod {
     public NuitInteropNeoForgeMod(IEventBus bus) {
+        NuitInterop.init();
         ModLoadingContext.get().getActiveContainer().registerExtensionPoint(IConfigScreenFactory.class, (mc, parent) -> new NuitInteropConfigScreen(parent, NuitInteropConfig.INSTANCE));
     }
 }

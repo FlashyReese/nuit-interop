@@ -3,7 +3,7 @@ package me.flashyreese.mods.nuit_interop.sky;
 import com.google.common.collect.ImmutableList;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import io.github.amerebagatelle.mods.nuit.components.RangeEntry;
+import me.flashyreese.mods.nuit.components.RangeEntry;
 import me.flashyreese.mods.nuit_interop.utils.Utils;
 
 import java.util.List;

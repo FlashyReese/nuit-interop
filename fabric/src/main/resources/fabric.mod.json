@@ -3,7 +3,7 @@
   "id": "nuit_interop",
   "version": "${version}",
   "name": "Nuit Interop",
-  "description": "Nuit Interoperability for MCPatcher/OptiFine Skies",
+  "description": "Nuit Interoperability for MCPatcher/OptiFine/FabricSkyBoxes Skies",
   "authors": [
     {
       "name": "FlashyReese",
@@ -17,6 +17,9 @@
   "icon": "assets/nuit_interop/icon.png",
   "environment": "client",
   "entrypoints": {
+    "client": [
+      "me.flashyreese.mods.nuit_interop.fabric.config.NuitInteropClientFabric"
+    ],
     "modmenu": [
       "me.flashyreese.mods.nuit_interop.fabric.config.ModMenuApiImpl"
     ]

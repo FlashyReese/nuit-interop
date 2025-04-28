@@ -7,8 +7,8 @@ import com.mojang.blaze3d.vertex.*;
 import com.mojang.math.Axis;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import io.github.amerebagatelle.mods.nuit.api.skyboxes.Skybox;
-import io.github.amerebagatelle.mods.nuit.mixin.SkyRendererAccessor;
+import me.flashyreese.mods.nuit.api.skyboxes.Skybox;
+import me.flashyreese.mods.nuit.mixin.SkyRendererAccessor;
 import me.flashyreese.mods.nuit_interop.config.NuitInteropConfig;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
@@ -90,6 +90,9 @@ public class OptiFineCustomSky implements Skybox {
                 ((SkyRenderer) skyRendererAccessor).renderSunriseAndSunset(poseStack, bufferSource, sunAngle, sunriseOrSunsetColor);
             }
 
+            ((SkyRenderer) skyRendererAccessor).renderSunMoonAndStars(poseStack, bufferSource, timeOfDay, moonPhase, rainLevel, 0, fogParameters);
+            bufferSource.endBatch();
+
             // Render Sky Layers
             RenderSystem.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
             poseStack.pushPose();
@@ -100,8 +103,6 @@ public class OptiFineCustomSky implements Skybox {
             poseStack.popPose();
             //
 
-            ((SkyRenderer) skyRendererAccessor).renderSunMoonAndStars(poseStack, bufferSource, timeOfDay, moonPhase, rainLevel, starBrightness, fogParameters);
-            bufferSource.endBatch();
             if (minecraft.player.getEyePosition(tickDelta).y - level.getLevelData().getHorizonHeight(level) < 0.0) {
                 ((SkyRenderer) skyRendererAccessor).renderDarkDisc(poseStack);
             }
