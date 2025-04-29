@@ -81,7 +81,7 @@ public class OptiFineCustomSky implements Skybox {
             float sunAngle = level.getSunAngle(tickDelta);
             float timeOfDay = level.getTimeOfDay(tickDelta);
             float rainLevel = 1.0F - level.getRainLevel(tickDelta);
-            float starBrightness = level.getStarBrightness(tickDelta) * rainLevel;
+            //float starBrightness = level.getStarBrightness(tickDelta) * rainLevel;
             int sunriseOrSunsetColor = dimensionSpecialEffects.getSunriseOrSunsetColor(timeOfDay);
             int moonPhase = level.getMoonPhase();
             int skyColor = level.getSkyColor(minecraft.gameRenderer.getMainCamera().getPosition(), tickDelta);
@@ -90,8 +90,8 @@ public class OptiFineCustomSky implements Skybox {
                 ((SkyRenderer) skyRendererAccessor).renderSunriseAndSunset(poseStack, bufferSource, sunAngle, sunriseOrSunsetColor);
             }
 
-            ((SkyRenderer) skyRendererAccessor).renderSunMoonAndStars(poseStack, bufferSource, timeOfDay, moonPhase, rainLevel, 0, fogParameters);
             bufferSource.endBatch();
+            ((SkyRenderer) skyRendererAccessor).renderSunMoonAndStars(poseStack, bufferSource, timeOfDay, moonPhase, rainLevel, 0, fogParameters);
 
             // Render Sky Layers
             RenderSystem.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);

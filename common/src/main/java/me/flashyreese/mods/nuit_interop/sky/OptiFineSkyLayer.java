@@ -162,7 +162,7 @@ public class OptiFineSkyLayer {
                 return false;
             }
 
-            if (!(this.biomeInclusion && this.biomes.contains(level.registryAccess().lookupOrThrow(Registries.BIOME).getId(currentBiome.value())))) {
+            if (!(this.biomeInclusion && this.biomes.contains(level.getBiome(cameraEntity.blockPosition()).unwrapKey().orElseThrow().location()))) {
                 return false;
             }
         }
