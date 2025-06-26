@@ -20,24 +20,12 @@ jobs:
           distribution: 'temurin'
           java-version: 21
           check-latest: true
-      - name: Build and Publish with Gradle
+      - name: Upload assets to releases
         run: ./gradlew build publishAllPublicationsToFlashyReeseReleasesRepository -Pbuild.release
         env:
           MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
-
-  publish:
-    needs: build
-    runs-on: ubuntu-22.04
-    strategy:
-      matrix:
-        include:
-          - platform: fabric
-            name: Fabric
-          - platform: neoforge
-            name: NeoForge
-    steps:
-      - name: Publish ${{ matrix.name }} to Modrinth, CurseForge & GitHub
+      - name: Publish Fabric to Modrinth, CurseForge & GitHub
         uses: Kir-Antipov/mc-publish@v3.3.0
         with:
           modrinth-id: HpdHOPOp
@@ -48,14 +36,32 @@ jobs:
 
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-          name: '[${{ matrix.name }}] ${{ github.event.release.name }}'
-          version: '${{ github.event.release.tag_name }}+${{ matrix.platform }}'
+          name: '[Fabric] ${{ github.event.release.name }}'
+          version: '${{ github.event.release.tag_name }}+fabric'
           version-type: release
 
-          loaders: ${{ matrix.platform }}
+          loaders: fabric
 
           files: |
-            ${{ matrix.platform }}/build/libs/!(*-@(dev|sources|javadoc|dev-shadow)).jar
-            ${{ matrix.platform }}/build/libs/*-@(dev|sources|javadoc|dev-shadow).jar
+            fabric/build/libs/!(*-@(dev|sources|javadoc|dev-shadow)).jar
+            fabric/build/libs/*-@(dev|sources|javadoc|dev-shadow).jar
+      - name: Publish NeoForge to Modrinth, CurseForge & GitHub
+        uses: Kir-Antipov/mc-publish@v3.3.0
+        with:
+          modrinth-id: HpdHOPOp
+          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
 
-          version-resolver: latest
+          curseforge-id: 697845
+          curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
+
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+          name: '[NeoForge] ${{ github.event.release.name }}'
+          version: '${{ github.event.release.tag_name }}+neoforge'
+          version-type: release
+
+          loaders: neoforge
+
+          files: |
+            neoforge/build/libs/!(*-@(dev|sources|javadoc|dev-shadow)).jar
+            neoforge/build/libs/*-@(dev|sources|javadoc|dev-shadow).jar

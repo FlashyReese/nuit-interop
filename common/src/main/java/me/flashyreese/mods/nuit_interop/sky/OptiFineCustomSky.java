@@ -90,9 +90,6 @@ public class OptiFineCustomSky implements Skybox {
                 ((SkyRenderer) skyRendererAccessor).renderSunriseAndSunset(poseStack, bufferSource, sunAngle, sunriseOrSunsetColor);
             }
 
-            bufferSource.endBatch();
-            ((SkyRenderer) skyRendererAccessor).renderSunMoonAndStars(poseStack, bufferSource, timeOfDay, moonPhase, rainLevel, 0, fogParameters);
-
             // Render Sky Layers
             RenderSystem.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
             poseStack.pushPose();
@@ -102,6 +99,9 @@ public class OptiFineCustomSky implements Skybox {
             poseStack.mulPose(Axis.XP.rotationDegrees(timeOfDay * 360.0F));
             poseStack.popPose();
             //
+
+            ((SkyRenderer) skyRendererAccessor).renderSunMoonAndStars(poseStack, bufferSource, timeOfDay, moonPhase, rainLevel, 0, fogParameters);
+            bufferSource.endBatch();
 
             if (minecraft.player.getEyePosition(tickDelta).y - level.getLevelData().getHorizonHeight(level) < 0.0) {
                 ((SkyRenderer) skyRendererAccessor).renderDarkDisc(poseStack);

@@ -45,6 +45,6 @@
     "minecraft": "~1.21.1",
     "java": ">=21",
     "fabric-api": "*",
-    "nuit": ">=1.0.0-snapshot"
+    "nuit": ">=1.0.0-beta.1+mc1.21.4"
   }
 }
