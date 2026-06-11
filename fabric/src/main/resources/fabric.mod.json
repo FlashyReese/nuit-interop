@@ -41,10 +41,10 @@
     "nuit_interop.mixins.json"
   ],
   "depends": {
-    "fabricloader": ">=0.16.10",
-    "minecraft": "~1.21.1",
+    "fabricloader": ">=0.18.4",
+    "minecraft": "~1.21.11",
     "java": ">=21",
     "fabric-api": "*",
-    "nuit": ">=1.0.0-beta.1+mc1.21.4"
+    "nuit": ">=1.0.0-snapshot+mc1.21.11-build.60"
   }
 }

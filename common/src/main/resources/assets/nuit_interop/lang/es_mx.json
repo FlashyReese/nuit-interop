@@ -6,6 +6,8 @@
   "options.nuit-interop.process_optifine.tooltip": "Si está habilitado, el mod intentará leer/cargar cielos personalizados de OptiFine.",
   "options.nuit-interop.process_mcpatcher": "Procesar MCPatcher",
   "options.nuit-interop.process_mcpatcher.tooltip": "Si está habilitado, el mod intentará leer/cargar cielos personalizados de MCPatcher.",
+  "options.nuit-interop.process_fabricskyboxes": "Procesar FabricSkyBoxes",
+  "options.nuit-interop.process_fabricskyboxes.tooltip": "Si está habilitado, el mod intentará leer/cargar JSON de cielos heredados de FabricSkyBoxes.",
   "options.nuit-interop.debug_mode": "Modo de depuración",
   "options.nuit-interop.debug_mode.tooltip": "Si está habilitado, el mod mostrará los resultados de conversión y los registros de errores en el proceso de conversión.",
   "options.nuit-interop.prefer_nuit_native": "Preferir Nuit Native",

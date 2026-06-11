@@ -6,6 +6,8 @@
   "options.nuit-interop.process_optifine.tooltip": "若开启，此模组将尝试读取/加载 OptiFine 自定义天空。",
   "options.nuit-interop.process_mcpatcher": "MCPatcher 自定义天空",
   "options.nuit-interop.process_mcpatcher.tooltip": "若开启，此模组将尝试读取/加载 MCPatcher 自定义天空。",
+  "options.nuit-interop.process_fabricskyboxes": "FabricSkyBoxes 旧版天空",
+  "options.nuit-interop.process_fabricskyboxes.tooltip": "若开启，此模组将尝试读取/加载旧版 FabricSkyBoxes 天空 JSON。",
   "options.nuit-interop.debug_mode": "调试模式",
   "options.nuit-interop.debug_mode.tooltip": "若开启，此模组会在转换过程中输出转换结果和错误日志。",
   "options.nuit-interop.prefer_nuit_native": "优先使用 Nuit 天空",

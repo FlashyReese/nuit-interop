@@ -9,28 +9,28 @@ version = "${version}"
 displayName = "Nuit Interop"
 authors = "FlashyReese"
 description = '''
-Nuit Interoperability for MCPatcher/OptiFine Skies
+Nuit Interoperability for MCPatcher/OptiFine/FabricSkyBoxes Skies
 '''
 logoFile = "assets/nuit_interop/icon.png"
 
 [[dependencies.nuit_interop]]
 modId = "neoforge"
 type = "required"
-versionRange = "[21.4.0,)"
+versionRange = "[21.11.40-beta,)"
 ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.nuit_interop]]
 modId = "minecraft"
 type = "required"
-versionRange = "[1.21.4,)"
+versionRange = "[1.21.11,)"
 ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.nuit_interop]]
 modId = "nuit"
 type = "required"
-versionRange = "[1.0.0-beta.1+mc1.21.4,)"
+versionRange = "[1.0.0-snapshot+mc1.21.11-build.60,)"
 ordering = "AFTER"
 side = "BOTH"
 

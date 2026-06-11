@@ -2,22 +2,29 @@ package me.flashyreese.mods.nuit_interop;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.Strictness;
 import me.flashyreese.mods.nuit.SkyboxManager;
 import me.flashyreese.mods.nuit.api.NuitPlatformHelper;
+import me.flashyreese.mods.nuit.api.skyboxes.Skybox;
 import me.flashyreese.mods.nuit.skybox.SkyboxType;
 import me.flashyreese.mods.nuit_interop.config.NuitInteropConfig;
+import me.flashyreese.mods.nuit_interop.fabricskyboxes.LegacyFabricSkyBoxesParser;
 import me.flashyreese.mods.nuit_interop.sky.OptiFineCustomSky;
 import me.flashyreese.mods.nuit_interop.utils.ResourceManagerHelper;
 import me.flashyreese.mods.nuit_interop.utils.Utils;
 import net.minecraft.core.Registry;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.Comparator;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -25,8 +32,10 @@ import java.util.regex.Pattern;
 public class NuitInterop {
     public static final String MOD_ID = "nuit_interop";
     private static final Logger LOGGER = LoggerFactory.getLogger("Nuit-Interop");
+    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().serializeNulls().setStrictness(Strictness.LENIENT).create();
 
     // Skybox conversion paths and patterns
+    private static final String FABRIC_SKYBOXES_SKY_PARENT = "sky";
     private static final String OPTIFINE_SKY_PARENT = "optifine/sky";
     private static final Pattern OPTIFINE_SKY_PATTERN = Pattern.compile("optifine/sky/(?<world>\\w+)/(?<name>\\w+).properties$");
     private static final String MCPATCHER_SKY_PARENT = "mcpatcher/sky";
@@ -35,7 +44,7 @@ public class NuitInterop {
     private static final SkyboxType<OptiFineCustomSky> OPTIFINE_CUSTOM_SKY_SKYBOX_TYPE;
 
     static {
-        OPTIFINE_CUSTOM_SKY_SKYBOX_TYPE = new SkyboxType<>(ResourceLocation.tryBuild(MOD_ID, "optifine-custom-sky"), 1, OptiFineCustomSky.CODEC);
+        OPTIFINE_CUSTOM_SKY_SKYBOX_TYPE = new SkyboxType<>(Identifier.tryBuild(MOD_ID, "optifine-custom-sky"), 1, OptiFineCustomSky.CODEC);
     }
 
     public static void init() {
@@ -66,7 +75,7 @@ public class NuitInterop {
             LOGGER.warn("Nuit-Interop is preventing native Nuit resource packs from loading!");
         }
 
-        LOGGER.warn("Removing existing Nuit skies and converting MCPatcher/OptiFine skyboxes...");
+        LOGGER.warn("Removing existing Nuit skies and converting legacy skyboxes...");
         LOGGER.warn("Visual bugs may occur; do not report these issues to Nuit or resource pack creators!");
 
         SkyboxManager.getInstance().clearSkyboxes();
@@ -74,11 +83,46 @@ public class NuitInterop {
     }
 
     private void convert(ResourceManagerHelper managerHelper) {
+        if (NuitInteropConfig.INSTANCE.processFabricSkyBoxes) {
+            convertFabricSkyBoxes(managerHelper);
+        }
         if (NuitInteropConfig.INSTANCE.processOptiFine) {
             convertNamespace(managerHelper, OPTIFINE_SKY_PARENT, OPTIFINE_SKY_PATTERN);
         }
         if (NuitInteropConfig.INSTANCE.processMCPatcher) {
             convertNamespace(managerHelper, MCPATCHER_SKY_PARENT, MCPATCHER_SKY_PATTERN);
+        }
+    }
+
+    private void convertFabricSkyBoxes(ResourceManagerHelper managerHelper) {
+        managerHelper.searchIn(FABRIC_SKYBOXES_SKY_PARENT)
+                .filter(id -> id.getPath().endsWith(".json"))
+                .sorted(Comparator.comparing(Identifier::toString))
+                .forEach(id -> this.processFabricSkyBox(managerHelper, id));
+    }
+
+    private void processFabricSkyBox(ResourceManagerHelper managerHelper, Identifier id) {
+        try (InputStream inputStream = managerHelper.getInputStream(id)) {
+            if (inputStream == null) {
+                return;
+            }
+
+            JsonObject json = GSON.fromJson(new InputStreamReader(inputStream), JsonObject.class);
+            if (json == null) {
+                return;
+            }
+
+            Optional<Skybox> skybox = LegacyFabricSkyBoxesParser.parse(id, json);
+            if (skybox.isEmpty()) {
+                return;
+            }
+
+            LOGGER.info("Loading legacy FabricSkyBoxes skybox {}...", id);
+            SkyboxManager.getInstance().addSkybox(id, skybox.get());
+        } catch (Exception e) {
+            if (NuitInteropConfig.INSTANCE.debugMode) {
+                LOGGER.error("Error converting legacy FabricSkyBoxes skybox: {}", id, e);
+            }
         }
     }
 
@@ -88,7 +132,7 @@ public class NuitInterop {
 
         managerHelper.searchIn(skyParent)
                 .filter(id -> id.getPath().endsWith(".properties"))
-                .sorted(Comparator.comparing(ResourceLocation::getPath, (id1, id2) -> this.compareSkyboxIds(id1, id2, pattern)))
+                .sorted(Comparator.comparing(Identifier::getPath, (id1, id2) -> this.compareSkyboxIds(id1, id2, pattern)))
                 .forEach(id -> processSkybox(managerHelper, id, pattern, overworldLayers, endLayers));
 
         if (!overworldLayers.isEmpty()) {
@@ -114,7 +158,7 @@ public class NuitInterop {
         return 0;
     }
 
-    private void processSkybox(ResourceManagerHelper managerHelper, ResourceLocation id, Pattern pattern, JsonArray overworldLayers, JsonArray endLayers) {
+    private void processSkybox(ResourceManagerHelper managerHelper, Identifier id, Pattern pattern, JsonArray overworldLayers, JsonArray endLayers) {
         Matcher matcher = pattern.matcher(id.getPath());
         if (!matcher.find()) return;
 
@@ -141,7 +185,7 @@ public class NuitInterop {
         }
     }
 
-    private Properties loadProperties(ResourceManagerHelper managerHelper, ResourceLocation id) {
+    private Properties loadProperties(ResourceManagerHelper managerHelper, Identifier id) {
         try (InputStream inputStream = managerHelper.getInputStream(id)) {
             if (inputStream == null) {
                 if (NuitInteropConfig.INSTANCE.debugMode) {
@@ -168,7 +212,7 @@ public class NuitInterop {
         skyboxJson.addProperty("world", world);
 
         //Skybox skybox = OptiFineCustomSky.CODEC.decode(JsonOps.INSTANCE, skyboxJson).getOrThrow().getFirst();
-        //SkyboxManager.getInstance().addSkybox(ResourceLocation.fromNamespaceAndPath("nuit-interop", skyboxName), skybox);
-        SkyboxManager.getInstance().addSkybox(ResourceLocation.tryBuild(MOD_ID, skyboxName), skyboxJson);
+        //SkyboxManager.getInstance().addSkybox(Identifier.fromNamespaceAndPath("nuit-interop", skyboxName), skybox);
+        SkyboxManager.getInstance().addSkybox(Identifier.tryBuild(MOD_ID, skyboxName), skyboxJson);
     }
 }

@@ -25,6 +25,7 @@ public class NuitInteropConfig {
     public boolean interoperability = true;
     public boolean debugMode = true;
     public boolean preferNuitNative = true;
+    public boolean processFabricSkyBoxes = true;
     public boolean processOptiFine = true;
     public boolean processMCPatcher = false;
     private File file;

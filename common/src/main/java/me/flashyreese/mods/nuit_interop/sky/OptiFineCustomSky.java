@@ -1,9 +1,9 @@
 package me.flashyreese.mods.nuit_interop.sky;
 
 import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.*;
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -13,11 +13,14 @@ import me.flashyreese.mods.nuit_interop.config.NuitInteropConfig;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.renderer.*;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SkyRenderer;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.util.ARGB;
+import net.minecraft.util.Mth;
+import net.minecraft.world.attribute.EnvironmentAttributes;
 import net.minecraft.world.level.Level;
-import org.joml.Matrix4f;
+import net.minecraft.world.level.MoonPhase;
+import org.joml.Matrix4fStack;
 
 import java.util.List;
 
@@ -37,82 +40,60 @@ public class OptiFineCustomSky implements Skybox {
     }
 
     @Override
-    public void render(SkyRendererAccessor skyRendererAccessor, PoseStack poseStack, float tickDelta, Camera camera, MultiBufferSource.BufferSource bufferSource, FogParameters fogParameters) {
-        this.renderSky(skyRendererAccessor, poseStack, tickDelta, camera, bufferSource, fogParameters);
+    public void render(SkyRendererAccessor skyRendererAccessor, Matrix4fStack matrix4fStack, float tickDelta, Camera camera, GpuBufferSlice fogParameters, MultiBufferSource.BufferSource bufferSource) {
+        this.renderSky(skyRendererAccessor, matrix4fStack, tickDelta, camera, bufferSource, fogParameters);
     }
 
-    private void renderEndSky(PoseStack poseStack, ClientLevel level) {
-        RenderSystem.enableBlend();
-        RenderSystem.depthMask(false);
-        BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
-        Matrix4f matrix4f = poseStack.last().pose();
-        for (int i = 0; i < 6; ++i) {
-            switch (i) {
-                case 1 -> matrix4f.rotationX(1.5707964F);
-                case 2 -> matrix4f.rotationX(-1.5707964F);
-                case 3 -> matrix4f.rotationX(3.1415927F);
-                case 4 -> matrix4f.rotationZ(1.5707964F);
-                case 5 -> matrix4f.rotationZ(-1.5707964F);
-            }
-
-            int color = ARGB.color(255, 40, 40, 40);
-            builder.addVertex(matrix4f, -100.0F, -100.0F, -100.0F).setUv(0.0F, 0.0F).setColor(color);
-            builder.addVertex(matrix4f, -100.0F, -100.0F, 100.0F).setUv(0.0F, 16.0F).setColor(color);
-            builder.addVertex(matrix4f, 100.0F, -100.0F, 100.0F).setUv(16.0F, 16.0F).setColor(color);
-            builder.addVertex(matrix4f, 100.0F, -100.0F, -100.0F).setUv(16.0F, 0.0F).setColor(color);
-        }
-        RenderSystem.setShader(CoreShaders.POSITION_TEX_COLOR);
-        RenderSystem.setShaderTexture(0, SkyRenderer.END_SKY_LOCATION);
-        BufferUploader.drawWithShader(builder.buildOrThrow());
-        this.render(poseStack, level, 0.0F);
-        RenderSystem.depthMask(true);
-        RenderSystem.disableBlend();
+    private void renderEndSky(SkyRendererAccessor skyRendererAccessor, Matrix4fStack matrix4fStack, ClientLevel level, float tickDelta) {
+        ((SkyRenderer) skyRendererAccessor).renderEndSky();
+        this.renderLayers(matrix4fStack, level, tickDelta);
     }
 
-    public void renderSky(SkyRendererAccessor skyRendererAccessor, PoseStack poseStack, float tickDelta, Camera camera, MultiBufferSource.BufferSource bufferSource, FogParameters fogParameters) {
+    public void renderSky(SkyRendererAccessor skyRendererAccessor, Matrix4fStack matrix4fStack, float tickDelta, Camera camera, MultiBufferSource.BufferSource bufferSource, GpuBufferSlice fogParameters) {
         Minecraft minecraft = Minecraft.getInstance();
         ClientLevel level = Minecraft.getInstance().level;
-        DimensionSpecialEffects dimensionSpecialEffects = level.effects();
-        DimensionSpecialEffects.SkyType skyType = dimensionSpecialEffects.skyType();
+        if (level == null) {
+            return;
+        }
+
         RenderSystem.setShaderFog(fogParameters);
-        if (skyType == DimensionSpecialEffects.SkyType.END) {
-            this.renderEndSky(poseStack, level);
-        } else {
-            float sunAngle = level.getSunAngle(tickDelta);
-            float timeOfDay = level.getTimeOfDay(tickDelta);
-            float rainLevel = 1.0F - level.getRainLevel(tickDelta);
-            //float starBrightness = level.getStarBrightness(tickDelta) * rainLevel;
-            int sunriseOrSunsetColor = dimensionSpecialEffects.getSunriseOrSunsetColor(timeOfDay);
-            int moonPhase = level.getMoonPhase();
-            int skyColor = level.getSkyColor(minecraft.gameRenderer.getMainCamera().getPosition(), tickDelta);
-            ((SkyRenderer) skyRendererAccessor).renderSkyDisc(ARGB.redFloat(skyColor), ARGB.greenFloat(skyColor), ARGB.blueFloat(skyColor));
-            if (dimensionSpecialEffects.isSunriseOrSunset(timeOfDay)) {
-                ((SkyRenderer) skyRendererAccessor).renderSunriseAndSunset(poseStack, bufferSource, sunAngle, sunriseOrSunsetColor);
-            }
+        if ("end".equals(level.dimensionType().skybox().getSerializedName())) {
+            this.renderEndSky(skyRendererAccessor, matrix4fStack, level, tickDelta);
+            return;
+        }
 
-            // Render Sky Layers
-            RenderSystem.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
-            poseStack.pushPose();
-            RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, rainLevel);
-            poseStack.mulPose(Axis.YP.rotationDegrees(-90.0F));
-            this.render(poseStack, level, tickDelta);
-            poseStack.mulPose(Axis.XP.rotationDegrees(timeOfDay * 360.0F));
-            poseStack.popPose();
-            //
+        PoseStack poseStack = new PoseStack();
+        float sunAngle = camera.attributeProbe().getValue(EnvironmentAttributes.SUN_ANGLE, tickDelta) * Mth.DEG_TO_RAD;
+        float timeOfDay = getTimeOfDay(level, tickDelta);
+        float rainLevel = 1.0F - level.getRainLevel(tickDelta);
+        int sunriseOrSunsetColor = camera.attributeProbe().getValue(EnvironmentAttributes.SUNRISE_SUNSET_COLOR, tickDelta);
+        MoonPhase moonPhase = camera.attributeProbe().getValue(EnvironmentAttributes.MOON_PHASE, tickDelta);
+        float starBrightness = camera.attributeProbe().getValue(EnvironmentAttributes.STAR_BRIGHTNESS, tickDelta) * rainLevel;
+        int skyColor = camera.attributeProbe().getValue(EnvironmentAttributes.SKY_COLOR, tickDelta);
 
-            ((SkyRenderer) skyRendererAccessor).renderSunMoonAndStars(poseStack, bufferSource, timeOfDay, moonPhase, rainLevel, 0, fogParameters);
-            bufferSource.endBatch();
+        ((SkyRenderer) skyRendererAccessor).renderSkyDisc(skyColor);
+        if (((sunriseOrSunsetColor >>> 24) & 0xFF) > 0) {
+            ((SkyRenderer) skyRendererAccessor).renderSunriseAndSunset(poseStack, sunAngle, sunriseOrSunsetColor);
+        }
 
-            if (minecraft.player.getEyePosition(tickDelta).y - level.getLevelData().getHorizonHeight(level) < 0.0) {
-                ((SkyRenderer) skyRendererAccessor).renderDarkDisc(poseStack);
-            }
+        matrix4fStack.pushMatrix();
+        matrix4fStack.rotate(Axis.YP.rotationDegrees(-90.0F));
+        this.renderLayers(matrix4fStack, level, tickDelta);
+        matrix4fStack.rotate(Axis.XP.rotationDegrees(timeOfDay * 360.0F));
+        matrix4fStack.popMatrix();
+
+        ((SkyRenderer) skyRendererAccessor).renderSunMoonAndStars(poseStack, sunAngle, sunAngle + Mth.PI, sunAngle, moonPhase, rainLevel, starBrightness);
+        bufferSource.endBatch();
+
+        if (minecraft.player != null && minecraft.player.getEyePosition(tickDelta).y - level.getLevelData().getHorizonHeight(level) < 0.0D) {
+            ((SkyRenderer) skyRendererAccessor).renderDarkDisc();
         }
     }
 
-    private void render(PoseStack poseStack, Level level, float tickDelta) {
+    private void renderLayers(Matrix4fStack matrix4fStack, Level level, float tickDelta) {
         long timeOfDay = level.getDayTime();
         int clampedTimeOfDay = (int) (timeOfDay % 24000L);
-        float skyAngle = level.getTimeOfDay(tickDelta);
+        float skyAngle = getTimeOfDay(level, tickDelta);
         float rainGradient = level.getRainLevel(tickDelta);
         float thunderGradient = level.getThunderLevel(tickDelta);
         if (rainGradient > 0.0F) {
@@ -121,17 +102,19 @@ public class OptiFineCustomSky implements Skybox {
 
         for (OptiFineSkyLayer optiFineSkyLayer : this.layers) {
             if (optiFineSkyLayer.isActive(timeOfDay, clampedTimeOfDay)) {
-                optiFineSkyLayer.render(level, poseStack, clampedTimeOfDay, skyAngle, rainGradient, thunderGradient);
+                optiFineSkyLayer.render(level, matrix4fStack, clampedTimeOfDay, skyAngle, rainGradient, thunderGradient);
             }
         }
+    }
 
-        OptiFineBlend.ADD.getBlendFunc().accept(1.0F - rainGradient);
+    private static float getTimeOfDay(Level level, float tickDelta) {
+        return Mth.positiveModulo((level.getDayTime() + tickDelta) / 24000.0F, 1.0F);
     }
 
     @Override
     public void tick(ClientLevel clientLevel) {
         this.active = true;
-        if (clientLevel.dimension() != this.worldResourceKey) {
+        if (!clientLevel.dimension().equals(this.worldResourceKey)) {
             this.layers.forEach(layer -> layer.setConditionAlpha(-1.0F));
             this.active = false;
         } else {
@@ -145,10 +128,13 @@ public class OptiFineCustomSky implements Skybox {
     }
 
     public List<OptiFineSkyLayer> getLayers() {
-        return layers;
+        return this.layers;
     }
 
     public ResourceKey<Level> getWorldResourceKey() {
-        return worldResourceKey;
+        return this.worldResourceKey;
+    }
+
+    public void close() {
     }
 }

@@ -5,8 +5,8 @@ import com.google.gson.JsonObject;
 import com.mojang.serialization.Codec;
 import me.flashyreese.mods.nuit.NuitClient;
 import me.flashyreese.mods.nuit.components.RangeEntry;
-import net.minecraft.ResourceLocationException;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.IdentifierException;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 
 import java.io.InputStream;
@@ -17,9 +17,9 @@ import java.util.regex.Pattern;
 public final class Utils {
     private static final Pattern OPTIFINE_RANGE_SEPARATOR = Pattern.compile("(\\d|\\))-(\\d|\\()");
 
-    public static JsonObject convertOptiFineSkyProperties(ResourceManagerHelper resourceManagerHelper, Properties properties, ResourceLocation propertiesResourceLocation) {
+    public static JsonObject convertOptiFineSkyProperties(ResourceManagerHelper resourceManagerHelper, Properties properties, Identifier propertiesIdentifier) {
         JsonObject jsonObject = new JsonObject();
-        ResourceLocation sourceTexture = parseSourceTexture(properties.getProperty("source", null), resourceManagerHelper, propertiesResourceLocation);
+        Identifier sourceTexture = parseSourceTexture(properties.getProperty("source", null), resourceManagerHelper, propertiesIdentifier);
         if (sourceTexture == null) {
             return null;
         } else {
@@ -114,7 +114,7 @@ public final class Utils {
             String[] biomes = biomesString.split(" ");
             if (biomes.length > 0) {
                 JsonArray jsonBiomes = new JsonArray();
-                Arrays.stream(biomes).filter(ResourceLocation::isValidPath).forEach(jsonBiomes::add);
+                Arrays.stream(biomes).filter(Identifier::isValidPath).forEach(jsonBiomes::add);
                 jsonObject.add("biomes", jsonBiomes);
             }
         }
@@ -161,8 +161,8 @@ public final class Utils {
         return jsonObject;
     }
 
-    public static ResourceLocation parseSourceTexture(String source, ResourceManagerHelper resourceManagerHelper, ResourceLocation propertiesId) {
-        ResourceLocation textureId;
+    public static Identifier parseSourceTexture(String source, ResourceManagerHelper resourceManagerHelper, Identifier propertiesId) {
+        Identifier textureId;
         String namespace;
         String path;
         if (source == null) {
@@ -179,10 +179,10 @@ public final class Utils {
                     namespace = parts[1];
                     path = parts[2];
                 } else {
-                    ResourceLocation sourceResourceLocation = ResourceLocation.tryParse(source);
-                    if (sourceResourceLocation != null) {
-                        namespace = sourceResourceLocation.getNamespace();
-                        path = sourceResourceLocation.getPath();
+                    Identifier sourceIdentifier = Identifier.tryParse(source);
+                    if (sourceIdentifier != null) {
+                        namespace = sourceIdentifier.getNamespace();
+                        path = sourceIdentifier.getPath();
                     } else {
                         return null;
                     }
@@ -191,8 +191,8 @@ public final class Utils {
         }
 
         try {
-            textureId = ResourceLocation.fromNamespaceAndPath(namespace, path);
-        } catch (ResourceLocationException e) {
+            textureId = Identifier.tryBuild(namespace, path);
+        } catch (IdentifierException e) {
             return null;
         }
 
