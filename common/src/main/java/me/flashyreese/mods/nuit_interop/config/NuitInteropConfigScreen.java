@@ -7,8 +7,6 @@ import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -16,7 +14,6 @@ import java.util.function.Supplier;
 public class NuitInteropConfigScreen extends Screen {
     private final Screen parent;
     private final NuitInteropConfig config;
-    private final Logger logger = LoggerFactory.getLogger("Nuit-Interop");
 
     public NuitInteropConfigScreen(Screen parent, NuitInteropConfig config) {
         super(Component.translatable(getTranslationKey("title")));
@@ -53,7 +50,6 @@ public class NuitInteropConfigScreen extends Screen {
 
     @Override
     public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
-        //super.renderBackground(context, mouseX, mouseY, delta);
         context.drawCenteredString(this.font, this.title, this.width / 2, 30, 0xFFFFFF);
         super.render(context, mouseX, mouseY, delta);
     }

@@ -8,9 +8,8 @@ import com.mojang.serialization.Codec;
 import org.joml.Vector4f;
 import org.lwjgl.opengl.GL46C;
 
-import java.util.Arrays;
+import java.util.Locale;
 import java.util.Map;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 public enum OptiFineBlend {
@@ -65,17 +64,18 @@ public enum OptiFineBlend {
     private final String name;
     private final BlendFunction blendFunction;
     private final Function<Float, Vector4f> colorAndEquationFunc;
-    private final Consumer<Float> blendFunc;
 
     OptiFineBlend(String name, BlendFunction blendFunction, Function<Float, Vector4f> colorAndEquationFunc) {
         this.name = name;
         this.blendFunction = blendFunction;
         this.colorAndEquationFunc = colorAndEquationFunc;
-        this.blendFunc = alpha -> this.applyEquationAndGetColor(alpha);
     }
 
     public static OptiFineBlend byName(String name) {
-        return Arrays.stream(OptiFineBlend.values()).filter(blend -> blend.toString().toLowerCase().equals(name)).findFirst().orElse(ADD);
+        if (name == null) {
+            return ADD;
+        }
+        return VALUES.getOrDefault(name.toLowerCase(Locale.ROOT).trim(), ADD);
     }
 
     public String getName() {
@@ -88,10 +88,6 @@ public enum OptiFineBlend {
 
     public Vector4f applyEquationAndGetColor(float alpha) {
         return this.colorAndEquationFunc.apply(alpha);
-    }
-
-    public Consumer<Float> getBlendFunc() {
-        return blendFunc;
     }
 
     @Override

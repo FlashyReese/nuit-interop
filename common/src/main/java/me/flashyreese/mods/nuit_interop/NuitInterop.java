@@ -11,9 +11,9 @@ import me.flashyreese.mods.nuit.api.skyboxes.Skybox;
 import me.flashyreese.mods.nuit.skybox.SkyboxType;
 import me.flashyreese.mods.nuit_interop.config.NuitInteropConfig;
 import me.flashyreese.mods.nuit_interop.fabricskyboxes.LegacyFabricSkyBoxesParser;
+import me.flashyreese.mods.nuit_interop.optifine.OptiFineSkyPropertiesConverter;
 import me.flashyreese.mods.nuit_interop.sky.OptiFineCustomSky;
 import me.flashyreese.mods.nuit_interop.utils.ResourceManagerHelper;
-import me.flashyreese.mods.nuit_interop.utils.Utils;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManager;
@@ -37,9 +37,9 @@ public class NuitInterop {
     // Skybox conversion paths and patterns
     private static final String FABRIC_SKYBOXES_SKY_PARENT = "sky";
     private static final String OPTIFINE_SKY_PARENT = "optifine/sky";
-    private static final Pattern OPTIFINE_SKY_PATTERN = Pattern.compile("optifine/sky/(?<world>\\w+)/(?<name>\\w+).properties$");
+    private static final Pattern OPTIFINE_SKY_PATTERN = Pattern.compile("optifine/sky/(?<world>world-?\\d+)/(?<name>[^/]+).properties$");
     private static final String MCPATCHER_SKY_PARENT = "mcpatcher/sky";
-    private static final Pattern MCPATCHER_SKY_PATTERN = Pattern.compile("mcpatcher/sky/(?<world>\\w+)/(?<name>\\w+).properties$");
+    private static final Pattern MCPATCHER_SKY_PATTERN = Pattern.compile("mcpatcher/sky/(?<world>world-?\\d+)/(?<name>[^/]+).properties$");
 
     private static final SkyboxType<OptiFineCustomSky> OPTIFINE_CUSTOM_SKY_SKYBOX_TYPE;
 
@@ -48,11 +48,6 @@ public class NuitInterop {
     }
 
     public static void init() {
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
         Registry.register(NuitPlatformHelper.INSTANCE.getSkyboxTypeRegistry(), OPTIFINE_CUSTOM_SKY_SKYBOX_TYPE.getName(), OPTIFINE_CUSTOM_SKY_SKYBOX_TYPE);
     }
 
@@ -127,14 +122,18 @@ public class NuitInterop {
     }
 
     private void convertNamespace(ResourceManagerHelper managerHelper, String skyParent, Pattern pattern) {
+        JsonArray netherLayers = new JsonArray();
         JsonArray overworldLayers = new JsonArray();
         JsonArray endLayers = new JsonArray();
 
         managerHelper.searchIn(skyParent)
                 .filter(id -> id.getPath().endsWith(".properties"))
                 .sorted(Comparator.comparing(Identifier::getPath, (id1, id2) -> this.compareSkyboxIds(id1, id2, pattern)))
-                .forEach(id -> processSkybox(managerHelper, id, pattern, overworldLayers, endLayers));
+                .forEach(id -> processSkybox(managerHelper, id, pattern, netherLayers, overworldLayers, endLayers));
 
+        if (!netherLayers.isEmpty()) {
+            createAndAddSkybox("minecraft:the_nether", "native-optifine-custom-sky-nether", netherLayers);
+        }
         if (!overworldLayers.isEmpty()) {
             createAndAddSkybox("minecraft:overworld", "native-optifine-custom-sky-overworld", overworldLayers);
         }
@@ -148,8 +147,8 @@ public class NuitInterop {
         Matcher matcherId2 = pattern.matcher(id2);
 
         if (matcherId1.find() && matcherId2.find()) {
-            int id1No = Utils.parseInt(matcherId1.group("name").replace("sky", ""), -1);
-            int id2No = Utils.parseInt(matcherId2.group("name").replace("sky", ""), -1);
+            int id1No = parseSkyLayerId(matcherId1.group("name"));
+            int id2No = parseSkyLayerId(matcherId2.group("name"));
 
             if (id1No >= 0 && id2No >= 0) {
                 return Integer.compare(id1No, id2No);
@@ -158,7 +157,19 @@ public class NuitInterop {
         return 0;
     }
 
-    private void processSkybox(ResourceManagerHelper managerHelper, Identifier id, Pattern pattern, JsonArray overworldLayers, JsonArray endLayers) {
+    private static int parseSkyLayerId(String name) {
+        if (name == null || !name.matches("sky\\d+")) {
+            return -1;
+        }
+
+        try {
+            return Integer.parseInt(name.substring(3));
+        } catch (NumberFormatException e) {
+            return -1;
+        }
+    }
+
+    private void processSkybox(ResourceManagerHelper managerHelper, Identifier id, Pattern pattern, JsonArray netherLayers, JsonArray overworldLayers, JsonArray endLayers) {
         Matcher matcher = pattern.matcher(id.getPath());
         if (!matcher.find()) return;
 
@@ -171,13 +182,19 @@ public class NuitInterop {
             return;
         }
 
+        if (parseSkyLayerId(name) < 0) {
+            return;
+        }
+
         LOGGER.info("Converting {} to Nuit Format...", id);
         Properties properties = this.loadProperties(managerHelper, id);
         if (properties == null) return;
 
-        JsonObject json = Utils.convertOptiFineSkyProperties(managerHelper, properties, id);
+        JsonObject json = OptiFineSkyPropertiesConverter.convert(managerHelper, properties, id);
         if (json != null) {
-            if ("world0".equals(world)) {
+            if ("world-1".equals(world)) {
+                netherLayers.add(json);
+            } else if ("world0".equals(world)) {
                 overworldLayers.add(json);
             } else if ("world1".equals(world)) {
                 endLayers.add(json);
@@ -211,8 +228,6 @@ public class NuitInterop {
         skyboxJson.add("layers", layers);
         skyboxJson.addProperty("world", world);
 
-        //Skybox skybox = OptiFineCustomSky.CODEC.decode(JsonOps.INSTANCE, skyboxJson).getOrThrow().getFirst();
-        //SkyboxManager.getInstance().addSkybox(Identifier.fromNamespaceAndPath("nuit-interop", skyboxName), skybox);
         SkyboxManager.getInstance().addSkybox(Identifier.tryBuild(MOD_ID, skyboxName), skyboxJson);
     }
 }

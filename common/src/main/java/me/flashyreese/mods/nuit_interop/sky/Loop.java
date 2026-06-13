@@ -9,10 +9,10 @@ import me.flashyreese.mods.nuit_interop.utils.Utils;
 import java.util.List;
 
 public class Loop {
-    public static final Loop DEFAULT = new Loop(7.0, ImmutableList.of());
+    public static final Loop DEFAULT = new Loop(8.0, ImmutableList.of());
     public static final Codec<Loop> CODEC = RecordCodecBuilder.create(
             instance -> instance.group(
-                            Utils.getClampedDouble(1.0, Double.MAX_VALUE).optionalFieldOf("days", 7.0).forGetter(Loop::getDays),
+                            Utils.getClampedDouble(1.0, Double.MAX_VALUE).optionalFieldOf("days", 8.0).forGetter(Loop::getDays),
                             RangeEntry.CODEC.listOf().optionalFieldOf("ranges", ImmutableList.of()).forGetter(Loop::getRanges)
                     )
                     .apply(instance, Loop::new)

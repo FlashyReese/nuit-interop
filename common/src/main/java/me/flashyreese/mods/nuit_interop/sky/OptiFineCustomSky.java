@@ -39,36 +39,40 @@ public class OptiFineCustomSky implements Skybox {
         this.worldResourceKey = worldResourceKey;
     }
 
+    private static float getCelestialAngle(Camera camera, float tickDelta) {
+        return Mth.positiveModulo(camera.attributeProbe().getValue(EnvironmentAttributes.SUN_ANGLE, tickDelta) / 360.0F, 1.0F);
+    }
+
     @Override
     public void render(SkyRendererAccessor skyRendererAccessor, Matrix4fStack matrix4fStack, float tickDelta, Camera camera, GpuBufferSlice fogParameters, MultiBufferSource.BufferSource bufferSource) {
-        this.renderSky(skyRendererAccessor, matrix4fStack, tickDelta, camera, bufferSource, fogParameters);
+        this.renderSky(skyRendererAccessor, matrix4fStack, tickDelta, camera, fogParameters, bufferSource);
     }
 
-    private void renderEndSky(SkyRendererAccessor skyRendererAccessor, Matrix4fStack matrix4fStack, ClientLevel level, float tickDelta) {
+    private void renderEndSky(SkyRendererAccessor skyRendererAccessor, Matrix4fStack matrix4fStack, ClientLevel level, float tickDelta, Camera camera) {
         ((SkyRenderer) skyRendererAccessor).renderEndSky();
-        this.renderLayers(matrix4fStack, level, tickDelta);
+        this.renderLayers(matrix4fStack, level, tickDelta, getCelestialAngle(camera, tickDelta));
     }
 
-    public void renderSky(SkyRendererAccessor skyRendererAccessor, Matrix4fStack matrix4fStack, float tickDelta, Camera camera, MultiBufferSource.BufferSource bufferSource, GpuBufferSlice fogParameters) {
+    public void renderSky(SkyRendererAccessor skyRendererAccessor, Matrix4fStack matrix4fStack, float tickDelta, Camera camera, GpuBufferSlice fogParameters, MultiBufferSource.BufferSource bufferSource) {
         Minecraft minecraft = Minecraft.getInstance();
-        ClientLevel level = Minecraft.getInstance().level;
+        ClientLevel level = minecraft.level;
         if (level == null) {
             return;
         }
 
         RenderSystem.setShaderFog(fogParameters);
         if ("end".equals(level.dimensionType().skybox().getSerializedName())) {
-            this.renderEndSky(skyRendererAccessor, matrix4fStack, level, tickDelta);
+            this.renderEndSky(skyRendererAccessor, matrix4fStack, level, tickDelta, camera);
             return;
         }
 
         PoseStack poseStack = new PoseStack();
-        float sunAngle = camera.attributeProbe().getValue(EnvironmentAttributes.SUN_ANGLE, tickDelta) * Mth.DEG_TO_RAD;
-        float timeOfDay = getTimeOfDay(level, tickDelta);
+        float sunAngleDegrees = camera.attributeProbe().getValue(EnvironmentAttributes.SUN_ANGLE, tickDelta);
+        float sunAngle = sunAngleDegrees * Mth.DEG_TO_RAD;
+        float celestialAngle = Mth.positiveModulo(sunAngleDegrees / 360.0F, 1.0F);
         float rainLevel = 1.0F - level.getRainLevel(tickDelta);
         int sunriseOrSunsetColor = camera.attributeProbe().getValue(EnvironmentAttributes.SUNRISE_SUNSET_COLOR, tickDelta);
         MoonPhase moonPhase = camera.attributeProbe().getValue(EnvironmentAttributes.MOON_PHASE, tickDelta);
-        float starBrightness = camera.attributeProbe().getValue(EnvironmentAttributes.STAR_BRIGHTNESS, tickDelta) * rainLevel;
         int skyColor = camera.attributeProbe().getValue(EnvironmentAttributes.SKY_COLOR, tickDelta);
 
         ((SkyRenderer) skyRendererAccessor).renderSkyDisc(skyColor);
@@ -78,11 +82,10 @@ public class OptiFineCustomSky implements Skybox {
 
         matrix4fStack.pushMatrix();
         matrix4fStack.rotate(Axis.YP.rotationDegrees(-90.0F));
-        this.renderLayers(matrix4fStack, level, tickDelta);
-        matrix4fStack.rotate(Axis.XP.rotationDegrees(timeOfDay * 360.0F));
+        this.renderLayers(matrix4fStack, level, tickDelta, celestialAngle);
         matrix4fStack.popMatrix();
 
-        ((SkyRenderer) skyRendererAccessor).renderSunMoonAndStars(poseStack, sunAngle, sunAngle + Mth.PI, sunAngle, moonPhase, rainLevel, starBrightness);
+        ((SkyRenderer) skyRendererAccessor).renderSunMoonAndStars(poseStack, sunAngle, sunAngle + Mth.PI, sunAngle, moonPhase, rainLevel, 0.0F);
         bufferSource.endBatch();
 
         if (minecraft.player != null && minecraft.player.getEyePosition(tickDelta).y - level.getLevelData().getHorizonHeight(level) < 0.0D) {
@@ -90,10 +93,9 @@ public class OptiFineCustomSky implements Skybox {
         }
     }
 
-    private void renderLayers(Matrix4fStack matrix4fStack, Level level, float tickDelta) {
+    private void renderLayers(Matrix4fStack matrix4fStack, Level level, float tickDelta, float celestialAngle) {
         long timeOfDay = level.getDayTime();
         int clampedTimeOfDay = (int) (timeOfDay % 24000L);
-        float skyAngle = getTimeOfDay(level, tickDelta);
         float rainGradient = level.getRainLevel(tickDelta);
         float thunderGradient = level.getThunderLevel(tickDelta);
         if (rainGradient > 0.0F) {
@@ -102,20 +104,16 @@ public class OptiFineCustomSky implements Skybox {
 
         for (OptiFineSkyLayer optiFineSkyLayer : this.layers) {
             if (optiFineSkyLayer.isActive(timeOfDay, clampedTimeOfDay)) {
-                optiFineSkyLayer.render(level, matrix4fStack, clampedTimeOfDay, skyAngle, rainGradient, thunderGradient);
+                optiFineSkyLayer.render(level, matrix4fStack, clampedTimeOfDay, celestialAngle, rainGradient, thunderGradient);
             }
         }
-    }
-
-    private static float getTimeOfDay(Level level, float tickDelta) {
-        return Mth.positiveModulo((level.getDayTime() + tickDelta) / 24000.0F, 1.0F);
     }
 
     @Override
     public void tick(ClientLevel clientLevel) {
         this.active = true;
         if (!clientLevel.dimension().equals(this.worldResourceKey)) {
-            this.layers.forEach(layer -> layer.setConditionAlpha(-1.0F));
+            this.layers.forEach(OptiFineSkyLayer::resetPositionAlpha);
             this.active = false;
         } else {
             this.layers.forEach(layer -> layer.tick(clientLevel));
@@ -133,8 +131,5 @@ public class OptiFineCustomSky implements Skybox {
 
     public ResourceKey<Level> getWorldResourceKey() {
         return this.worldResourceKey;
-    }
-
-    public void close() {
     }
 }
