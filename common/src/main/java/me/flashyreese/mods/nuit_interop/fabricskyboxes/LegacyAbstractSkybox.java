@@ -2,12 +2,11 @@ package me.flashyreese.mods.nuit_interop.fabricskyboxes;
 
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.vertex.PoseStack;
-import me.flashyreese.mods.nuit.NuitClient;
 import me.flashyreese.mods.nuit.api.skyboxes.NuitSkybox;
 import me.flashyreese.mods.nuit.components.Conditions;
 import me.flashyreese.mods.nuit.components.Properties;
 import me.flashyreese.mods.nuit.mixin.SkyRendererAccessor;
-import me.flashyreese.mods.nuit.util.DynamicTransformsBuilder;
+import me.flashyreese.mods.nuit.render.NuitRenderBackend;
 import me.flashyreese.mods.nuit_interop.config.NuitInteropConfig;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
@@ -48,7 +47,6 @@ public abstract class LegacyAbstractSkybox implements NuitSkybox {
     private final Properties nuitProperties;
     private final Conditions nuitConditions;
     protected float alpha;
-    private int lastTime = -2;
     private float conditionAlpha = 0.0F;
 
     protected LegacyAbstractSkybox(LegacyProperties properties, LegacyConditions conditions, LegacyDecorations decorations) {
@@ -76,21 +74,16 @@ public abstract class LegacyAbstractSkybox implements NuitSkybox {
             this.conditionAlpha = LegacyUtils.calculateConditionAlphaValue(1.0F, 0.0F, this.conditionAlpha, condition ? this.legacyProperties.transitionInDuration() : this.legacyProperties.transitionOutDuration(), condition);
         } else if (!this.legacyProperties.fade().keyFrames().isEmpty()) {
             fadeAlpha = LegacyUtils.calculateKeyFrameAlphaValue(this.legacyProperties.fade().keyFrames(), this.legacyProperties.fade().duration(), currentTime);
-            int duration = (this.lastTime == currentTime - 1 || this.lastTime == currentTime)
-                    ? (condition ? this.legacyProperties.transitionInDuration() : this.legacyProperties.transitionOutDuration())
-                    : NuitClient.config().generalSettings.unexpectedTransitionDuration;
+            int duration = condition ? this.legacyProperties.transitionInDuration() : this.legacyProperties.transitionOutDuration();
             this.conditionAlpha = LegacyUtils.calculateConditionAlphaValue(1.0F, 0.0F, this.conditionAlpha, duration, condition);
         } else {
             fadeAlpha = LegacyUtils.calculateFadeAlphaValue(1.0F, 0.0F, (int) currentTime, this.legacyProperties.fade().startFadeIn(), this.legacyProperties.fade().endFadeIn(), this.legacyProperties.fade().startFadeOut(), this.legacyProperties.fade().endFadeOut());
-            int duration = (this.lastTime == currentTime - 1 || this.lastTime == currentTime)
-                    ? (condition ? this.legacyProperties.transitionInDuration() : this.legacyProperties.transitionOutDuration())
-                    : NuitClient.config().generalSettings.unexpectedTransitionDuration;
+            int duration = condition ? this.legacyProperties.transitionInDuration() : this.legacyProperties.transitionOutDuration();
             this.conditionAlpha = LegacyUtils.calculateConditionAlphaValue(1.0F, 0.0F, this.conditionAlpha, duration, condition);
         }
 
         this.alpha = (fadeAlpha * this.conditionAlpha) * (this.legacyProperties.maxAlpha() - this.legacyProperties.minAlpha()) + this.legacyProperties.minAlpha();
         this.alpha = Mth.clamp(this.alpha, this.legacyProperties.minAlpha(), this.legacyProperties.maxAlpha());
-        this.lastTime = (int) currentTime;
     }
 
     protected boolean checkConditions() {
@@ -231,10 +224,7 @@ public abstract class LegacyAbstractSkybox implements NuitSkybox {
         matrix4fStack.pushMatrix();
         try {
             this.decorations.rotation().apply(matrix4fStack, level);
-            GpuBufferSlice dynamicTransforms = DynamicTransformsBuilder.of()
-                    .withModelViewMatrix(new Matrix4f(matrix4fStack))
-                    .withShaderColor(this.decorations.blend().applyEquationAndGetColor(this.alpha))
-                    .build();
+            GpuBufferSlice dynamicTransforms = NuitRenderBackend.createDynamicTransforms(new Matrix4f(matrix4fStack), this.decorations.blend().applyEquationAndGetColor(this.alpha));
 
             if (this.decorations.sunEnabled()) {
                 LegacyFsbRenderer.drawCelestialQuad(LegacyFsbRenderer.celestialPipeline(), dynamicTransforms, this.decorations.sunTexture(), 30.0F, 100.0F, new me.flashyreese.mods.nuit.components.UVRange(0.0F, 0.0F, 1.0F, 1.0F));

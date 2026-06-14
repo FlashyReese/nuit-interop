@@ -2,22 +2,16 @@ package me.flashyreese.mods.nuit_interop.fabricskyboxes;
 
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.textures.FilterMode;
-import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import me.flashyreese.mods.nuit.mixin.SkyRendererAccessor;
-import me.flashyreese.mods.nuit.util.BufferUploader;
-import me.flashyreese.mods.nuit.util.DynamicTransformsBuilder;
+import me.flashyreese.mods.nuit.render.NuitRenderBackend;
 import me.flashyreese.mods.nuit.util.Utils;
 import net.minecraft.client.Camera;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.client.renderer.texture.AbstractTexture;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fStack;
 
@@ -46,13 +40,8 @@ public class LegacyEndSkybox extends LegacyAbstractSkybox {
                 builder.addVertex(matrix4f, 100.0F, -100.0F, -100.0F).setUv(16.0F, 0.0F).setColor(color);
             }
 
-            GpuBufferSlice dynamicTransforms = DynamicTransformsBuilder.of().build();
-            AbstractTexture texture = Minecraft.getInstance().getTextureManager().getTexture(SkyRendererAccessor.getEndSky());
-            GpuTextureView textureView = texture.getTextureView();
-            BufferUploader.drawWithShader(pipeline, builder.buildOrThrow(), pass -> {
-                pass.setUniform("DynamicTransforms", dynamicTransforms);
-                pass.bindTexture("Sampler0", textureView, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
-            });
+            GpuBufferSlice dynamicTransforms = NuitRenderBackend.createDynamicTransforms();
+            LegacyFsbRenderer.drawTexturedMesh(pipeline, builder.buildOrThrow(), dynamicTransforms, SkyRendererAccessor.getEndSky());
         }
 
         this.renderDecorations(skyRendererAccessor, matrix4fStack, tickDelta, camera);

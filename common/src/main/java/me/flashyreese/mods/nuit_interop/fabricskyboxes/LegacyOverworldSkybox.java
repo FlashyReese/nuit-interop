@@ -9,8 +9,7 @@ import com.mojang.math.Axis;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import me.flashyreese.mods.nuit.mixin.SkyRendererAccessor;
-import me.flashyreese.mods.nuit.util.BufferUploader;
-import me.flashyreese.mods.nuit.util.DynamicTransformsBuilder;
+import me.flashyreese.mods.nuit.render.NuitRenderBackend;
 import net.minecraft.client.Camera;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -75,8 +74,8 @@ public class LegacyOverworldSkybox extends LegacyAbstractSkybox {
                     float z = -y * 40.0F * (alpha / 255.0F);
                     bufferBuilder.addVertex(matrix4fStack, x * 120.0F, y * 120.0F, z).setColor(transparentColor);
                 }
-                GpuBufferSlice dynamicTransforms = DynamicTransformsBuilder.of().build();
-                BufferUploader.drawWithShader(pipeline, bufferBuilder.buildOrThrow(), pass -> pass.setUniform("DynamicTransforms", dynamicTransforms));
+                GpuBufferSlice dynamicTransforms = NuitRenderBackend.createDynamicTransforms();
+                NuitRenderBackend.draw(pipeline, bufferBuilder.buildOrThrow(), dynamicTransforms);
             }
         } finally {
             matrix4fStack.popMatrix();

@@ -10,8 +10,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import me.flashyreese.mods.nuit.components.Blend;
 import me.flashyreese.mods.nuit.components.RGBA;
 import me.flashyreese.mods.nuit.mixin.SkyRendererAccessor;
-import me.flashyreese.mods.nuit.util.BufferUploader;
-import me.flashyreese.mods.nuit.util.DynamicTransformsBuilder;
+import me.flashyreese.mods.nuit.render.NuitRenderBackend;
 import me.flashyreese.mods.nuit.util.Utils;
 import net.minecraft.client.Camera;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -45,9 +44,7 @@ public class LegacyMonoColorSkybox extends LegacyAbstractSkybox {
         }
 
         RenderPipeline pipeline = LegacyFsbRenderer.monoPipeline(this.blend.getBlendFunction());
-        GpuBufferSlice dynamicTransforms = DynamicTransformsBuilder.of()
-                .withShaderColor(this.blend.applyEquationAndGetColor(this.alpha))
-                .build();
+        GpuBufferSlice dynamicTransforms = NuitRenderBackend.createDynamicTransforms(RenderSystem.getModelViewMatrix(), this.blend.applyEquationAndGetColor(this.alpha));
         try (ByteBufferBuilder byteBufferBuilder = new ByteBufferBuilder(pipeline.getVertexFormat().getVertexSize() * 24)) {
             BufferBuilder builder = new BufferBuilder(byteBufferBuilder, pipeline.getVertexFormatMode(), pipeline.getVertexFormat());
             for (int face = 0; face < 6; ++face) {
@@ -57,7 +54,7 @@ public class LegacyMonoColorSkybox extends LegacyAbstractSkybox {
                 builder.addVertex(matrix4f, 100.0F, -100.0F, 100.0F).setColor(this.color.getRed(), this.color.getGreen(), this.color.getBlue(), this.color.getAlpha());
                 builder.addVertex(matrix4f, 100.0F, -100.0F, -100.0F).setColor(this.color.getRed(), this.color.getGreen(), this.color.getBlue(), this.color.getAlpha());
             }
-            BufferUploader.drawWithShader(pipeline, builder.buildOrThrow(), pass -> pass.setUniform("DynamicTransforms", dynamicTransforms));
+            NuitRenderBackend.draw(pipeline, builder.buildOrThrow(), dynamicTransforms);
         } finally {
             this.renderDecorations(skyRendererAccessor, matrix4fStack, tickDelta, camera);
             GL46C.glBlendEquation(GL46C.GL_FUNC_ADD);

@@ -3,9 +3,6 @@ package me.flashyreese.mods.nuit_interop.sky;
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.textures.FilterMode;
-import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.math.Axis;
@@ -14,8 +11,7 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import me.flashyreese.mods.nuit.components.RangeEntry;
 import me.flashyreese.mods.nuit.components.Weather;
-import me.flashyreese.mods.nuit.util.BufferUploader;
-import me.flashyreese.mods.nuit.util.DynamicTransformsBuilder;
+import me.flashyreese.mods.nuit.render.NuitRenderBackend;
 import me.flashyreese.mods.nuit_interop.fabricskyboxes.LegacyFsbRenderer;
 import me.flashyreese.mods.nuit_interop.optifine.OptiFineSkyMath;
 import net.minecraft.client.Minecraft;
@@ -130,11 +126,7 @@ public class OptiFineSkyLayer {
                 matrix4fStack.popMatrix();
             }
 
-            GpuTextureView textureView = Minecraft.getInstance().getTextureManager().getTexture(this.source).getTextureView();
-            BufferUploader.drawWithShader(pipeline, builder.buildOrThrow(), pass -> {
-                pass.setUniform("DynamicTransforms", dynamicTransforms);
-                pass.bindTexture("Sampler0", textureView, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
-            });
+            LegacyFsbRenderer.drawTexturedMesh(pipeline, builder.buildOrThrow(), dynamicTransforms, this.source);
         }
     }
 
@@ -145,10 +137,7 @@ public class OptiFineSkyLayer {
     }
 
     private GpuBufferSlice createDynamicTransforms(Matrix4fStack matrix4fStack, Vector4f colorModifier) {
-        return DynamicTransformsBuilder.of()
-                .withModelViewMatrix(new Matrix4f(matrix4fStack))
-                .withShaderColor(colorModifier)
-                .build();
+        return NuitRenderBackend.createDynamicTransforms(new Matrix4f(matrix4fStack), colorModifier);
     }
 
     private void buildSkyCube(BufferBuilder builder) {

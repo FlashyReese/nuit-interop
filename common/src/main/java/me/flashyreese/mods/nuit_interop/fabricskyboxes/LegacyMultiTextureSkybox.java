@@ -2,6 +2,8 @@ package me.flashyreese.mods.nuit_interop.fabricskyboxes;
 
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import me.flashyreese.mods.nuit.components.Blend;
@@ -58,17 +60,13 @@ public class LegacyMultiTextureSkybox extends LegacyTexturedSkybox implements Te
     }
 
     private void drawPartial(RenderPipeline pipeline, GpuBufferSlice dynamicTransforms, Matrix4f matrix4f, Texture texture, UVRange position, UVRange uv) {
-        try (com.mojang.blaze3d.vertex.ByteBufferBuilder byteBufferBuilder = new com.mojang.blaze3d.vertex.ByteBufferBuilder(pipeline.getVertexFormat().getVertexSize() * 4)) {
-            com.mojang.blaze3d.vertex.BufferBuilder builder = new com.mojang.blaze3d.vertex.BufferBuilder(byteBufferBuilder, pipeline.getVertexFormatMode(), pipeline.getVertexFormat());
+        try (ByteBufferBuilder byteBufferBuilder = new ByteBufferBuilder(pipeline.getVertexFormat().getVertexSize() * 4)) {
+            BufferBuilder builder = new BufferBuilder(byteBufferBuilder, pipeline.getVertexFormatMode(), pipeline.getVertexFormat());
             builder.addVertex(matrix4f, position.minU(), -this.quadSize, position.minV()).setUv(uv.minU(), uv.minV());
             builder.addVertex(matrix4f, position.minU(), -this.quadSize, position.maxV()).setUv(uv.minU(), uv.maxV());
             builder.addVertex(matrix4f, position.maxU(), -this.quadSize, position.maxV()).setUv(uv.maxU(), uv.maxV());
             builder.addVertex(matrix4f, position.maxU(), -this.quadSize, position.minV()).setUv(uv.maxU(), uv.minV());
-            com.mojang.blaze3d.textures.GpuTextureView textureView = net.minecraft.client.Minecraft.getInstance().getTextureManager().getTexture(texture.getTextureId()).getTextureView();
-            me.flashyreese.mods.nuit.util.BufferUploader.drawWithShader(pipeline, builder.buildOrThrow(), pass -> {
-                pass.setUniform("DynamicTransforms", dynamicTransforms);
-                pass.bindTexture("Sampler0", textureView, com.mojang.blaze3d.systems.RenderSystem.getSamplerCache().getClampToEdge(com.mojang.blaze3d.textures.FilterMode.NEAREST));
-            });
+            LegacyFsbRenderer.drawTexturedMesh(pipeline, builder.buildOrThrow(), dynamicTransforms, texture.getTextureId());
         }
     }
 
