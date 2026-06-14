@@ -20,6 +20,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.attribute.EnvironmentAttributes;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.MoonPhase;
+import net.minecraft.world.level.dimension.DimensionType;
 import org.joml.Matrix4fStack;
 
 import java.util.List;
@@ -61,7 +62,7 @@ public class OptiFineCustomSky implements Skybox {
         }
 
         RenderSystem.setShaderFog(fogParameters);
-        if ("end".equals(level.dimensionType().skybox().getSerializedName())) {
+        if (level.dimensionType().skybox() == DimensionType.Skybox.END) {
             this.renderEndSky(skyRendererAccessor, matrix4fStack, level, tickDelta, camera);
             return;
         }

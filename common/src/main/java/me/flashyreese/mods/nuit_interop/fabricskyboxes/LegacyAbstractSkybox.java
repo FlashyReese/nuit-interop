@@ -21,6 +21,7 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.MoonPhase;
 import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.level.material.FogType;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fStack;
@@ -122,7 +123,7 @@ public abstract class LegacyAbstractSkybox implements NuitSkybox {
     protected boolean checkWorlds() {
         Minecraft client = Minecraft.getInstance();
         Objects.requireNonNull(client.level);
-        Identifier currentVanillaWorld = Identifier.withDefaultNamespace(client.level.dimensionType().skybox().getSerializedName());
+        Identifier currentVanillaWorld = getVanillaWorldId(client.level.dimensionType().skybox());
         if (this.legacyConditions.worlds().isEmpty()) {
             return true;
         }
@@ -130,6 +131,14 @@ public abstract class LegacyAbstractSkybox implements NuitSkybox {
         boolean contains = this.legacyConditions.worlds().contains(currentVanillaWorld)
                 || this.legacyConditions.worlds().contains(client.level.dimension().identifier());
         return this.legacyConditions.worldsExcluded() ^ contains;
+    }
+
+    private static Identifier getVanillaWorldId(DimensionType.Skybox skybox) {
+        return switch (skybox) {
+            case NONE -> Identifier.withDefaultNamespace("none");
+            case OVERWORLD -> Identifier.withDefaultNamespace("overworld");
+            case END -> Identifier.withDefaultNamespace("end");
+        };
     }
 
     protected boolean checkEffects() {
