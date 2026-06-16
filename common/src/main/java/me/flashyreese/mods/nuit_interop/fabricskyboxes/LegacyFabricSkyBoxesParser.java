@@ -9,7 +9,6 @@ import it.unimi.dsi.fastutil.ints.Int2LongArrayMap;
 import it.unimi.dsi.fastutil.longs.Long2FloatOpenHashMap;
 import me.flashyreese.mods.nuit.api.skyboxes.Skybox;
 import me.flashyreese.mods.nuit.components.Blend;
-import me.flashyreese.mods.nuit.components.Blender;
 import me.flashyreese.mods.nuit.components.RangeEntry;
 import me.flashyreese.mods.nuit.components.RGBA;
 import me.flashyreese.mods.nuit.components.Texture;
@@ -118,7 +117,7 @@ public final class LegacyFabricSkyBoxesParser {
                     readFlatProperties(jsonObject),
                     readFlatConditions(jsonObject),
                     LegacyDecorations.DEFAULT,
-                    new Blend(getBoolean(jsonObject, "shouldBlend", false) ? "add" : "", Blender.normal()),
+                    new Blend(getBoolean(jsonObject, "shouldBlend", false) ? "add" : ""),
                     new LegacyTextures(
                             new Texture(readIdentifier(jsonObject, "texture_north")),
                             new Texture(readIdentifier(jsonObject, "texture_south")),

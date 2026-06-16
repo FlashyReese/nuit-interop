@@ -6,16 +6,17 @@ import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import me.flashyreese.mods.nuit.mixin.SkyRendererAccessor;
+import me.flashyreese.mods.nuit.api.skyboxes.SkyboxRenderContext;
 import me.flashyreese.mods.nuit.render.NuitRenderBackend;
 import me.flashyreese.mods.nuit.util.Utils;
-import net.minecraft.client.Camera;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.renderer.EndFlashState;
 import net.minecraft.client.renderer.RenderPipelines;
 import org.joml.Matrix4f;
-import org.joml.Matrix4fStack;
 
 public class LegacyEndSkybox extends LegacyAbstractSkybox {
+    private static final float MIN_END_FLASH_INTENSITY = 0.00001F;
+
     public static final Codec<LegacyEndSkybox> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             LegacyProperties.CODEC.fieldOf("properties").forGetter(skybox -> skybox.legacyProperties),
             LegacyConditions.CODEC.optionalFieldOf("conditions", LegacyConditions.DEFAULT).forGetter(skybox -> skybox.legacyConditions),
@@ -27,7 +28,8 @@ public class LegacyEndSkybox extends LegacyAbstractSkybox {
     }
 
     @Override
-    public void render(SkyRendererAccessor skyRendererAccessor, Matrix4fStack matrix4fStack, float tickDelta, Camera camera, GpuBufferSlice fogParameters, MultiBufferSource.BufferSource bufferSource) {
+    public void render(SkyboxRenderContext context) {
+        context.applyFog();
         RenderPipeline pipeline = RenderPipelines.END_SKY;
         try (ByteBufferBuilder byteBufferBuilder = new ByteBufferBuilder(pipeline.getVertexFormat().getVertexSize() * 24)) {
             BufferBuilder builder = new BufferBuilder(byteBufferBuilder, pipeline.getVertexFormatMode(), pipeline.getVertexFormat());
@@ -41,9 +43,26 @@ public class LegacyEndSkybox extends LegacyAbstractSkybox {
             }
 
             GpuBufferSlice dynamicTransforms = NuitRenderBackend.createDynamicTransforms();
-            LegacyFsbRenderer.drawTexturedMesh(pipeline, builder.buildOrThrow(), dynamicTransforms, SkyRendererAccessor.getEndSky());
+            LegacyFsbRenderer.drawTexturedMesh(pipeline, builder.buildOrThrow(), dynamicTransforms, context.endSkyTexture());
         }
 
-        this.renderDecorations(skyRendererAccessor, matrix4fStack, tickDelta, camera);
+        this.renderEndFlash(context);
+        this.renderDecorations(context, context.skyModelViewStack());
+    }
+
+    private void renderEndFlash(SkyboxRenderContext context) {
+        if (!(context.camera().entity().level() instanceof ClientLevel level)) {
+            return;
+        }
+
+        EndFlashState endFlashState = level.endFlashState();
+        if (endFlashState == null) {
+            return;
+        }
+
+        float intensity = endFlashState.getIntensity(context.tickDelta()) * this.alpha;
+        if (intensity > MIN_END_FLASH_INTENSITY) {
+            context.renderEndFlash(intensity, endFlashState.getXAngle(), endFlashState.getYAngle());
+        }
     }
 }

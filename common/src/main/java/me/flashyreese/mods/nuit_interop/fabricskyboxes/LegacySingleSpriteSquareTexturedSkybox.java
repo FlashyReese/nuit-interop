@@ -4,20 +4,18 @@ import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import me.flashyreese.mods.nuit.api.skyboxes.SkyboxRenderContext;
 import me.flashyreese.mods.nuit.components.Blend;
 import me.flashyreese.mods.nuit.components.Texture;
-import me.flashyreese.mods.nuit.mixin.SkyRendererAccessor;
-import me.flashyreese.mods.nuit.skybox.TextureRegistrar;
 import me.flashyreese.mods.nuit.util.Utils;
-import net.minecraft.client.Camera;
-import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.resources.Identifier;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fStack;
 
 import java.util.List;
+import java.util.stream.Stream;
 
-public class LegacySingleSpriteSquareTexturedSkybox extends LegacyTexturedSkybox implements TextureRegistrar {
+public class LegacySingleSpriteSquareTexturedSkybox extends LegacyTexturedSkybox {
     public static final Codec<LegacySingleSpriteSquareTexturedSkybox> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             LegacyProperties.CODEC.fieldOf("properties").forGetter(skybox -> skybox.legacyProperties),
             LegacyConditions.CODEC.optionalFieldOf("conditions", LegacyConditions.DEFAULT).forGetter(skybox -> skybox.legacyConditions),
@@ -34,7 +32,7 @@ public class LegacySingleSpriteSquareTexturedSkybox extends LegacyTexturedSkybox
     }
 
     @Override
-    protected void renderTexturedSkybox(SkyRendererAccessor skyRendererAccessor, Matrix4fStack matrix4fStack, float tickDelta, Camera camera, GpuBufferSlice fogParameters, MultiBufferSource.BufferSource bufferSource, RenderPipeline pipeline, GpuBufferSlice dynamicTransforms) {
+    protected void renderTexturedSkybox(SkyboxRenderContext context, Matrix4fStack matrix4fStack, RenderPipeline pipeline, GpuBufferSlice dynamicTransforms) {
         for (int face = 0; face < 6; ++face) {
             Matrix4f matrix4f = Utils.getMatrixForRotatedFace(face);
             LegacyFsbRenderer.drawTexturedQuad(pipeline, dynamicTransforms, matrix4f, this.texture.getTextureId(), LegacyUVRanges.SINGLE_SPRITE.byId(face));
@@ -47,6 +45,8 @@ public class LegacySingleSpriteSquareTexturedSkybox extends LegacyTexturedSkybox
 
     @Override
     public List<Identifier> getTexturesToRegister() {
-        return List.of(this.texture.getTextureId());
+        return Stream.concat(super.getTexturesToRegister().stream(), Stream.of(this.texture.getTextureId()))
+                .distinct()
+                .toList();
     }
 }

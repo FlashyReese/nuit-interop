@@ -3,9 +3,10 @@ package me.flashyreese.mods.nuit_interop.fabricskyboxes;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.vertex.PoseStack;
 import me.flashyreese.mods.nuit.api.skyboxes.NuitSkybox;
+import me.flashyreese.mods.nuit.api.skyboxes.SkyboxRenderContext;
+import me.flashyreese.mods.nuit.api.skyboxes.SkyboxTextureProvider;
 import me.flashyreese.mods.nuit.components.Conditions;
 import me.flashyreese.mods.nuit.components.Properties;
-import me.flashyreese.mods.nuit.mixin.SkyRendererAccessor;
 import me.flashyreese.mods.nuit.render.NuitRenderBackend;
 import me.flashyreese.mods.nuit_interop.config.NuitInteropConfig;
 import net.minecraft.client.Camera;
@@ -26,9 +27,11 @@ import org.joml.Matrix4f;
 import org.joml.Matrix4fStack;
 import org.lwjgl.opengl.GL46C;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
-public abstract class LegacyAbstractSkybox implements NuitSkybox {
+public abstract class LegacyAbstractSkybox implements NuitSkybox, SkyboxTextureProvider {
     private static final Identifier DEFAULT_MOON_ATLAS = Identifier.withDefaultNamespace("textures/environment/celestial/moon_phases.png");
     private static final Identifier[] DEFAULT_MOON_PHASES = new Identifier[]{
             Identifier.withDefaultNamespace("textures/environment/celestial/moon/full_moon.png"),
@@ -215,16 +218,18 @@ public abstract class LegacyAbstractSkybox implements NuitSkybox {
         return this.legacyConditions.weatherExcluded() ^ matches;
     }
 
-    protected void renderDecorations(SkyRendererAccessor skyRendererAccessor, Matrix4fStack matrix4fStack, float tickDelta, Camera camera) {
+    protected void renderDecorations(SkyboxRenderContext context, Matrix4fStack matrix4fStack) {
         if (!this.decorations.sunEnabled() && !this.decorations.moonEnabled() && !this.decorations.starsEnabled()) {
             return;
         }
 
+        Camera camera = context.camera();
+        float tickDelta = context.tickDelta();
         ClientLevel level = Objects.requireNonNull((ClientLevel) camera.entity().level());
         matrix4fStack.pushMatrix();
         try {
             this.decorations.rotation().apply(matrix4fStack, level);
-            GpuBufferSlice dynamicTransforms = NuitRenderBackend.createDynamicTransforms(new Matrix4f(matrix4fStack), this.decorations.blend().applyEquationAndGetColor(this.alpha));
+            GpuBufferSlice dynamicTransforms = NuitRenderBackend.createDynamicTransforms(new Matrix4f(matrix4fStack), this.decorations.blend().getColorModifier(this.alpha));
 
             if (this.decorations.sunEnabled()) {
                 LegacyFsbRenderer.drawCelestialQuad(LegacyFsbRenderer.celestialPipeline(), dynamicTransforms, this.decorations.sunTexture(), 30.0F, 100.0F, new me.flashyreese.mods.nuit.components.UVRange(0.0F, 0.0F, 1.0F, 1.0F));
@@ -237,7 +242,7 @@ public abstract class LegacyAbstractSkybox implements NuitSkybox {
             if (this.decorations.starsEnabled()) {
                 PoseStack poseStack = new PoseStack();
                 this.decorations.rotation().apply(poseStack, level);
-                skyRendererAccessor.invokeRenderStars(camera.attributeProbe().getValue(EnvironmentAttributes.STAR_BRIGHTNESS, tickDelta), poseStack);
+                context.renderStars(camera.attributeProbe().getValue(EnvironmentAttributes.STAR_BRIGHTNESS, tickDelta), poseStack);
             }
         } finally {
             matrix4fStack.popMatrix();
@@ -247,7 +252,7 @@ public abstract class LegacyAbstractSkybox implements NuitSkybox {
 
     private void renderMoon(MoonPhase moonPhase, GpuBufferSlice dynamicTransforms) {
         Identifier moonTexture = this.decorations.moonTexture();
-        boolean useDefaultMoonPhases = moonTexture.equals(DEFAULT_MOON_ATLAS) || moonTexture.equals(LegacyDecorations.MOON_PHASES);
+        boolean useDefaultMoonPhases = usesDefaultMoonPhases(moonTexture);
         Identifier texture = useDefaultMoonPhases ? DEFAULT_MOON_PHASES[moonPhase.index()] : moonTexture;
         float startX = 0.0F;
         float startY = 0.0F;
@@ -264,6 +269,26 @@ public abstract class LegacyAbstractSkybox implements NuitSkybox {
         }
 
         LegacyFsbRenderer.drawCelestialQuad(LegacyFsbRenderer.celestialPipeline(), dynamicTransforms, texture, 20.0F, -100.0F, new me.flashyreese.mods.nuit.components.UVRange(endX, endY, startX, startY));
+    }
+
+    protected static boolean usesDefaultMoonPhases(Identifier moonTexture) {
+        return moonTexture.equals(DEFAULT_MOON_ATLAS) || moonTexture.equals(LegacyDecorations.MOON_PHASES);
+    }
+
+    protected static List<Identifier> getMoonTexturesToRegister(Identifier moonTexture) {
+        return usesDefaultMoonPhases(moonTexture) ? List.of(DEFAULT_MOON_PHASES) : List.of(moonTexture);
+    }
+
+    @Override
+    public List<Identifier> getTexturesToRegister() {
+        List<Identifier> textures = new ArrayList<>();
+        if (this.decorations.sunEnabled()) {
+            textures.add(this.decorations.sunTexture());
+        }
+        if (this.decorations.moonEnabled()) {
+            textures.addAll(getMoonTexturesToRegister(this.decorations.moonTexture()));
+        }
+        return textures.stream().distinct().toList();
     }
 
     @Override

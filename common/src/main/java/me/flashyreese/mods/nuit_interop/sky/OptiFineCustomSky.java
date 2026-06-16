@@ -2,30 +2,51 @@ package me.flashyreese.mods.nuit_interop.sky;
 
 import com.google.common.collect.ImmutableList;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.pipeline.RenderPipeline;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.math.Axis;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import me.flashyreese.mods.nuit.api.skyboxes.Skybox;
-import me.flashyreese.mods.nuit.mixin.SkyRendererAccessor;
+import me.flashyreese.mods.nuit.api.skyboxes.RenderableSkybox;
+import me.flashyreese.mods.nuit.api.skyboxes.SkyboxRenderContext;
+import me.flashyreese.mods.nuit.api.skyboxes.SkyboxTextureProvider;
+import me.flashyreese.mods.nuit.components.UVRange;
+import me.flashyreese.mods.nuit.render.NuitRenderBackend;
+import me.flashyreese.mods.nuit.util.Utils;
 import me.flashyreese.mods.nuit_interop.config.NuitInteropConfig;
+import me.flashyreese.mods.nuit_interop.fabricskyboxes.LegacyFsbRenderer;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.SkyRenderer;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.util.Mth;
 import net.minecraft.world.attribute.EnvironmentAttributes;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.MoonPhase;
 import net.minecraft.world.level.dimension.DimensionType;
+import org.joml.Matrix4f;
 import org.joml.Matrix4fStack;
+import org.joml.Vector4f;
 
 import java.util.List;
+import java.util.stream.Stream;
 
-public class OptiFineCustomSky implements Skybox {
+public class OptiFineCustomSky implements RenderableSkybox, SkyboxTextureProvider {
+    private static final Identifier DEFAULT_SUN = Identifier.withDefaultNamespace("textures/environment/celestial/sun.png");
+    private static final Identifier[] DEFAULT_MOON_PHASES = new Identifier[]{
+            Identifier.withDefaultNamespace("textures/environment/celestial/moon/full_moon.png"),
+            Identifier.withDefaultNamespace("textures/environment/celestial/moon/waning_gibbous.png"),
+            Identifier.withDefaultNamespace("textures/environment/celestial/moon/third_quarter.png"),
+            Identifier.withDefaultNamespace("textures/environment/celestial/moon/waning_crescent.png"),
+            Identifier.withDefaultNamespace("textures/environment/celestial/moon/new_moon.png"),
+            Identifier.withDefaultNamespace("textures/environment/celestial/moon/waxing_crescent.png"),
+            Identifier.withDefaultNamespace("textures/environment/celestial/moon/first_quarter.png"),
+            Identifier.withDefaultNamespace("textures/environment/celestial/moon/waxing_gibbous.png")
+    };
+
     public static final Codec<OptiFineCustomSky> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             OptiFineSkyLayer.CODEC.listOf().optionalFieldOf("layers", ImmutableList.of()).forGetter(OptiFineCustomSky::getLayers),
             Level.RESOURCE_KEY_CODEC.fieldOf("world").forGetter(OptiFineCustomSky::getWorldResourceKey)
@@ -45,29 +66,31 @@ public class OptiFineCustomSky implements Skybox {
     }
 
     @Override
-    public void render(SkyRendererAccessor skyRendererAccessor, Matrix4fStack matrix4fStack, float tickDelta, Camera camera, GpuBufferSlice fogParameters, MultiBufferSource.BufferSource bufferSource) {
-        this.renderSky(skyRendererAccessor, matrix4fStack, tickDelta, camera, fogParameters, bufferSource);
+    public void render(SkyboxRenderContext context) {
+        this.renderSky(context);
     }
 
-    private void renderEndSky(SkyRendererAccessor skyRendererAccessor, Matrix4fStack matrix4fStack, ClientLevel level, float tickDelta, Camera camera) {
-        ((SkyRenderer) skyRendererAccessor).renderEndSky();
+    private void renderEndSky(SkyboxRenderContext context, Matrix4fStack matrix4fStack, ClientLevel level, float tickDelta, Camera camera) {
+        this.renderEndSkyTexture(context);
         this.renderLayers(matrix4fStack, level, tickDelta, getCelestialAngle(camera, tickDelta));
     }
 
-    public void renderSky(SkyRendererAccessor skyRendererAccessor, Matrix4fStack matrix4fStack, float tickDelta, Camera camera, GpuBufferSlice fogParameters, MultiBufferSource.BufferSource bufferSource) {
+    public void renderSky(SkyboxRenderContext context) {
         Minecraft minecraft = Minecraft.getInstance();
         ClientLevel level = minecraft.level;
         if (level == null) {
             return;
         }
 
-        RenderSystem.setShaderFog(fogParameters);
+        context.applyFog();
+        Matrix4fStack matrix4fStack = context.skyModelViewStack();
+        Camera camera = context.camera();
+        float tickDelta = context.tickDelta();
         if (level.dimensionType().skybox() == DimensionType.Skybox.END) {
-            this.renderEndSky(skyRendererAccessor, matrix4fStack, level, tickDelta, camera);
+            this.renderEndSky(context, matrix4fStack, level, tickDelta, camera);
             return;
         }
 
-        PoseStack poseStack = new PoseStack();
         float sunAngleDegrees = camera.attributeProbe().getValue(EnvironmentAttributes.SUN_ANGLE, tickDelta);
         float sunAngle = sunAngleDegrees * Mth.DEG_TO_RAD;
         float celestialAngle = Mth.positiveModulo(sunAngleDegrees / 360.0F, 1.0F);
@@ -76,9 +99,9 @@ public class OptiFineCustomSky implements Skybox {
         MoonPhase moonPhase = camera.attributeProbe().getValue(EnvironmentAttributes.MOON_PHASE, tickDelta);
         int skyColor = camera.attributeProbe().getValue(EnvironmentAttributes.SKY_COLOR, tickDelta);
 
-        ((SkyRenderer) skyRendererAccessor).renderSkyDisc(skyColor);
+        context.renderSkyDisc(skyColor);
         if (((sunriseOrSunsetColor >>> 24) & 0xFF) > 0) {
-            ((SkyRenderer) skyRendererAccessor).renderSunriseAndSunset(poseStack, sunAngle, sunriseOrSunsetColor);
+            this.renderSunriseAndSunset(matrix4fStack, sunAngle, sunriseOrSunsetColor);
         }
 
         matrix4fStack.pushMatrix();
@@ -86,11 +109,82 @@ public class OptiFineCustomSky implements Skybox {
         this.renderLayers(matrix4fStack, level, tickDelta, celestialAngle);
         matrix4fStack.popMatrix();
 
-        ((SkyRenderer) skyRendererAccessor).renderSunMoonAndStars(poseStack, sunAngle, sunAngle + Mth.PI, sunAngle, moonPhase, rainLevel, 0.0F);
-        bufferSource.endBatch();
+        this.renderSunMoon(matrix4fStack, sunAngle, moonPhase, rainLevel);
 
         if (minecraft.player != null && minecraft.player.getEyePosition(tickDelta).y - level.getLevelData().getHorizonHeight(level) < 0.0D) {
-            ((SkyRenderer) skyRendererAccessor).renderDarkDisc();
+            context.renderDarkDisc();
+        }
+    }
+
+    private void renderSunriseAndSunset(Matrix4fStack matrix4fStack, float sunAngle, int sunriseOrSunsetColor) {
+        matrix4fStack.pushMatrix();
+        try {
+            matrix4fStack.rotate(Axis.XP.rotationDegrees(90.0F));
+            float zRotation = Mth.sin(sunAngle) < 0.0F ? 180.0F : 0.0F;
+            matrix4fStack.rotate(Axis.ZP.rotationDegrees(zRotation));
+            matrix4fStack.rotate(Axis.ZP.rotationDegrees(90.0F));
+
+            RenderPipeline pipeline = RenderPipelines.SUNRISE_SUNSET;
+            try (ByteBufferBuilder byteBufferBuilder = new ByteBufferBuilder(pipeline.getVertexFormat().getVertexSize() * 17)) {
+                BufferBuilder bufferBuilder = new BufferBuilder(byteBufferBuilder, pipeline.getVertexFormatMode(), pipeline.getVertexFormat());
+                bufferBuilder.addVertex(matrix4fStack, 0.0F, 100.0F, 0.0F).setColor(sunriseOrSunsetColor);
+                int transparentColor = sunriseOrSunsetColor & 0x00FFFFFF;
+                float alpha = ((sunriseOrSunsetColor >>> 24) & 0xFF) / 255.0F;
+                for (int i = 0; i <= 16; i++) {
+                    float angleRadians = (float) i * Mth.TWO_PI / 16.0F;
+                    float x = Mth.sin(angleRadians);
+                    float y = Mth.cos(angleRadians);
+                    float z = -y * 40.0F * alpha;
+                    bufferBuilder.addVertex(matrix4fStack, x * 120.0F, y * 120.0F, z).setColor(transparentColor);
+                }
+                GpuBufferSlice dynamicTransforms = NuitRenderBackend.createDynamicTransforms();
+                NuitRenderBackend.draw(pipeline, bufferBuilder.buildOrThrow(), dynamicTransforms);
+            }
+        } finally {
+            matrix4fStack.popMatrix();
+        }
+    }
+
+    private void renderSunMoon(Matrix4fStack matrix4fStack, float sunAngle, MoonPhase moonPhase, float rainLevel) {
+        matrix4fStack.pushMatrix();
+        try {
+            matrix4fStack.rotate(Axis.YP.rotationDegrees(-90.0F));
+            matrix4fStack.pushMatrix();
+            try {
+                matrix4fStack.rotate(Axis.XP.rotation(sunAngle));
+                GpuBufferSlice dynamicTransforms = NuitRenderBackend.createDynamicTransforms(new Matrix4f(matrix4fStack), new Vector4f(1.0F, 1.0F, 1.0F, rainLevel));
+                LegacyFsbRenderer.drawCelestialQuad(LegacyFsbRenderer.celestialPipeline(), dynamicTransforms, DEFAULT_SUN, 30.0F, 100.0F, new UVRange(0.0F, 0.0F, 1.0F, 1.0F));
+            } finally {
+                matrix4fStack.popMatrix();
+            }
+
+            matrix4fStack.pushMatrix();
+            try {
+                matrix4fStack.rotate(Axis.XP.rotation(sunAngle + Mth.PI));
+                GpuBufferSlice dynamicTransforms = NuitRenderBackend.createDynamicTransforms(new Matrix4f(matrix4fStack), new Vector4f(1.0F, 1.0F, 1.0F, rainLevel));
+                LegacyFsbRenderer.drawCelestialQuad(LegacyFsbRenderer.celestialPipeline(), dynamicTransforms, DEFAULT_MOON_PHASES[moonPhase.index()], 20.0F, 100.0F, new UVRange(0.0F, 0.0F, 1.0F, 1.0F));
+            } finally {
+                matrix4fStack.popMatrix();
+            }
+        } finally {
+            matrix4fStack.popMatrix();
+        }
+    }
+
+    private void renderEndSkyTexture(SkyboxRenderContext context) {
+        RenderPipeline pipeline = RenderPipelines.END_SKY;
+        try (ByteBufferBuilder byteBufferBuilder = new ByteBufferBuilder(pipeline.getVertexFormat().getVertexSize() * 24)) {
+            BufferBuilder builder = new BufferBuilder(byteBufferBuilder, pipeline.getVertexFormatMode(), pipeline.getVertexFormat());
+            for (int face = 0; face < 6; ++face) {
+                Matrix4f matrix4f = Utils.getMatrixForRotatedFace(face);
+                builder.addVertex(matrix4f, -100.0F, -100.0F, -100.0F).setUv(0.0F, 0.0F).setColor(0xFF282828);
+                builder.addVertex(matrix4f, -100.0F, -100.0F, 100.0F).setUv(0.0F, 16.0F).setColor(0xFF282828);
+                builder.addVertex(matrix4f, 100.0F, -100.0F, 100.0F).setUv(16.0F, 16.0F).setColor(0xFF282828);
+                builder.addVertex(matrix4f, 100.0F, -100.0F, -100.0F).setUv(16.0F, 0.0F).setColor(0xFF282828);
+            }
+
+            GpuBufferSlice dynamicTransforms = NuitRenderBackend.createDynamicTransforms();
+            LegacyFsbRenderer.drawTexturedMesh(pipeline, builder.buildOrThrow(), dynamicTransforms, context.endSkyTexture());
         }
     }
 
@@ -132,5 +226,12 @@ public class OptiFineCustomSky implements Skybox {
 
     public ResourceKey<Level> getWorldResourceKey() {
         return this.worldResourceKey;
+    }
+
+    @Override
+    public List<Identifier> getTexturesToRegister() {
+        return Stream.concat(this.layers.stream().map(OptiFineSkyLayer::getSource), Stream.concat(Stream.of(DEFAULT_SUN), Stream.of(DEFAULT_MOON_PHASES)))
+                .distinct()
+                .toList();
     }
 }

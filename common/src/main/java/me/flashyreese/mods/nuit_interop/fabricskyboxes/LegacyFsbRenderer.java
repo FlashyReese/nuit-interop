@@ -35,7 +35,7 @@ public final class LegacyFsbRenderer {
     }
 
     public static GpuBufferSlice dynamicTransforms(Matrix4f modelViewMatrix, Blend blend, float alpha) {
-        Vector4f colorModifier = blend.applyEquationAndGetColor(alpha);
+        Vector4f colorModifier = blend.getColorModifier(alpha);
         return NuitRenderBackend.createDynamicTransforms(modelViewMatrix, colorModifier);
     }
 
@@ -74,7 +74,7 @@ public final class LegacyFsbRenderer {
         }
     }
 
-    static void drawCelestialQuad(RenderPipeline pipeline, GpuBufferSlice dynamicTransforms, Identifier textureId, float size, float y, UVRange uvRange) {
+    public static void drawCelestialQuad(RenderPipeline pipeline, GpuBufferSlice dynamicTransforms, Identifier textureId, float size, float y, UVRange uvRange) {
         try (ByteBufferBuilder byteBufferBuilder = new ByteBufferBuilder(pipeline.getVertexFormat().getVertexSize() * 4)) {
             BufferBuilder builder = new BufferBuilder(byteBufferBuilder, pipeline.getVertexFormatMode(), pipeline.getVertexFormat());
             builder.addVertex(-size, y, -size).setUv(uvRange.minU(), uvRange.minV());

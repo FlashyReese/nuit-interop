@@ -2,19 +2,16 @@ package me.flashyreese.mods.nuit_interop.fabricskyboxes;
 
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.math.Axis;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import me.flashyreese.mods.nuit.mixin.SkyRendererAccessor;
+import me.flashyreese.mods.nuit.api.skyboxes.SkyboxRenderContext;
 import me.flashyreese.mods.nuit.render.NuitRenderBackend;
 import net.minecraft.client.Camera;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.client.renderer.SkyRenderer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.attribute.EnvironmentAttributes;
 import org.joml.Matrix4fStack;
@@ -31,24 +28,27 @@ public class LegacyOverworldSkybox extends LegacyAbstractSkybox {
     }
 
     @Override
-    public void render(SkyRendererAccessor skyRendererAccessor, Matrix4fStack matrix4fStack, float tickDelta, Camera camera, GpuBufferSlice fogParameters, MultiBufferSource.BufferSource bufferSource) {
-        RenderSystem.setShaderFog(fogParameters);
+    public void render(SkyboxRenderContext context) {
+        context.applyFog();
+        Matrix4fStack matrix4fStack = context.skyModelViewStack();
+        Camera camera = context.camera();
+        float tickDelta = context.tickDelta();
         ClientLevel level = (ClientLevel) camera.entity().level();
         float sunAngle = camera.attributeProbe().getValue(EnvironmentAttributes.SUN_ANGLE, tickDelta) * Mth.DEG_TO_RAD;
         int sunriseOrSunsetColor = camera.attributeProbe().getValue(EnvironmentAttributes.SUNRISE_SUNSET_COLOR, tickDelta);
         int skyColor = camera.attributeProbe().getValue(EnvironmentAttributes.SKY_COLOR, tickDelta);
 
         int alphaColor = (skyColor & 0x00FFFFFF) | ((int) (this.alpha * 255.0F) << 24);
-        ((SkyRenderer) skyRendererAccessor).renderSkyDisc(alphaColor);
+        context.renderSkyDisc(alphaColor);
         if (((sunriseOrSunsetColor >>> 24) & 0xFF) > 0) {
             this.renderSunriseAndSunset(matrix4fStack, sunAngle, sunriseOrSunsetColor);
         }
 
-        this.renderDecorations(skyRendererAccessor, matrix4fStack, tickDelta, camera);
+        this.renderDecorations(context, matrix4fStack);
 
         double eyeHeight = camera.entity().getEyePosition(tickDelta).y - level.getLevelData().getHorizonHeight(level);
         if (eyeHeight < 0.0D) {
-            ((SkyRenderer) skyRendererAccessor).renderDarkDisc();
+            context.renderDarkDisc();
         }
     }
 
