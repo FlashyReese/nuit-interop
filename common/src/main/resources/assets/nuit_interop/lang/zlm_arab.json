@@ -1,8 +1,8 @@
 {
   "options.nuit-interop.title": "کونفيݢوراسي Nuit Interop",
-  "options.nuit-interop.interoperability": "کبوليهأوڤراسين",
+  "options.nuit-interop.interoperability": "کبوليهأوڤراسيان",
   "options.nuit-interop.interoperability.tooltip": "جک دداياکن⹁ مود اکن چوبا ممباچ/ممواتکن لاڠيت ترسواي MCPatcher/OptiFine.",
-  "options.nuit-interop.mode": "مود کبوليهأوڤراسين",
+  "options.nuit-interop.mode": "مود کبوليهأوڤراسيان",
   "options.nuit-interop.mode.tooltip": "- اصلي: مڠݢوناکن ڤلقساناٴن سمولا OptiFine.\n- ڤنوکرن: منوکر فورمت OptiFine کڤد جنيس لاڠيت Nuit سديا اد.",
   "options.nuit-interop.mode.native": "اصلي",
   "options.nuit-interop.mode.conversion": "ڤنوکرن",
@@ -10,10 +10,12 @@
   "options.nuit-interop.process_optifine.tooltip": "جک دداياکن⹁ مود اکن چوبا ممباچ/ممواتکن لاڠيت ترسواي OptiFine.",
   "options.nuit-interop.process_mcpatcher": "ڤروسيس MCPatcher",
   "options.nuit-interop.process_mcpatcher.tooltip": "جک دداياکن⹁ مود اکن چوبا ممباچ/ممواتکن لاڠيت ترسواي MCPatcher.",
+  "options.nuit-interop.process_fabricskyboxes": "ڤروسيس FabricSkyBoxes",
+  "options.nuit-interop.process_fabricskyboxes.tooltip": "جک دداياکن⹁ مود اکن چوبا ممباچ/ممواتکن JSON کوتق لاڠيت FabricSkyBoxes ليݢاسي.",
   "options.nuit-interop.debug_mode": "مود ڽهڤڤيجت",
-  "options.nuit-interop.debug_mode.tooltip": "جک دداياکن⹁ مود اکن مڠاٴوتڤوت حاصيل ڤنوکرن دان لوݢ رالت دالم ڤروسيس ڤنوکرن.",
-  "options.nuit-interop.prefer_nuit_native": "لبيه ڤيليه لاڠيت اصلي Nuit",
+  "options.nuit-interop.debug_mode.tooltip": "جک دداياکن⹁ مود اکن مڠاٴوتڤوتکن حاصيل ڤنوکرن دان لوݢ رالت دالم ڤروسيس ڤنوکرن.",
+  "options.nuit-interop.prefer_nuit_native": "اوتامکن لاڠيت اصلي Nuit",
   "options.nuit-interop.prefer_nuit_native.tooltip": "جک دداياکن⹁ مود تيدق اکن ممڤروسيس/منوکر لاڠيت MCPatcher/OptiFine جک لاڠيت Nuit دکسن.",
-  "options.nuit-interop.dump_data": "لوڠݢوق داتا",
-  "options.nuit-interop.dump_data.tooltip": "لوڠݢوق لاڠيت يڠ دتوکر اوليه Nuit Interop ک\".minecraft/nuit-interop-dump\" دان بوک ديريکتوري. (نوتا: ديريکتوري اصل اکن دڤادمکن.)"
+  "options.nuit-interop.dump_data": "تاروقکن داتا",
+  "options.nuit-interop.dump_data.tooltip": "مناروقکن لاڠيت يڠ دتوکر درڤد Nuit Interop ک\".minecraft/nuit-interop-dump\" دان ممبوک ديريکتوري. (چاتتن: ديريکتوري اصل اکن دڤادمکن.)"
 }

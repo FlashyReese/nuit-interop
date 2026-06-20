@@ -10,10 +10,12 @@
   "options.nuit-interop.process_optifine.tooltip": "Jika didayakan, mod akan cuba membaca/memuatkan Langit Tersuai OptiFine.",
   "options.nuit-interop.process_mcpatcher": "Proses MCPatcher",
   "options.nuit-interop.process_mcpatcher.tooltip": "Jika didayakan, mod akan cuba membaca/memuatkan Langit Tersuai MCPatcher.",
+  "options.nuit-interop.process_fabricskyboxes": "Proses FabricSkyBoxes",
+  "options.nuit-interop.process_fabricskyboxes.tooltip": "Jika didayakan, mod akan cuba membaca/memuatkan JSON kotak langit FabricSkyBoxes legasi.",
   "options.nuit-interop.debug_mode": "Mod Nyahpepijat",
   "options.nuit-interop.debug_mode.tooltip": "Jika didayakan, mod akan mengoutputkan hasil penukaran dan log ralat dalam proses penukaran.",
-  "options.nuit-interop.prefer_nuit_native": "Lebih Pilih Langit Asli Nuit",
+  "options.nuit-interop.prefer_nuit_native": "Utamakan Langit Asli Nuit",
   "options.nuit-interop.prefer_nuit_native.tooltip": "Jika didayakan, mod tidak akan memproses/menukar langit MCPatcher/OptiFine jika langit Nuit dikesan.",
-  "options.nuit-interop.dump_data": "Longgok Data",
-  "options.nuit-interop.dump_data.tooltip": "Longgok langit yang ditukar oleh Nuit Interop ke \".minecraft/nuit-interop-dump\" dan buka direktori. (Nota: Direktori asal akan dipadamkan.)"
+  "options.nuit-interop.dump_data": "Tarukkan Data",
+  "options.nuit-interop.dump_data.tooltip": "Menarukkan langit yang ditukar daripada Nuit Interop ke \".minecraft/nuit-interop-dump\" dan membuka direktori. (Catatan: Direktori asal akan dipadamkan.)"
 }
