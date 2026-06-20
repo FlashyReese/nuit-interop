@@ -30,7 +30,7 @@ side = "BOTH"
 [[dependencies.nuit_interop]]
 modId = "nuit"
 type = "required"
-versionRange = "[1.0.0-beta.2,)"
+versionRange = "[1.0.0-beta.3,)"
 ordering = "AFTER"
 side = "BOTH"
 
