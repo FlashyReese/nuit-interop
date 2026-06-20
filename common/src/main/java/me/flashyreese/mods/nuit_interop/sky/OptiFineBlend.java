@@ -2,8 +2,7 @@ package me.flashyreese.mods.nuit_interop.sky;
 
 import com.google.common.collect.ImmutableMap;
 import com.mojang.blaze3d.pipeline.BlendFunction;
-import com.mojang.blaze3d.platform.DestFactor;
-import com.mojang.blaze3d.platform.SourceFactor;
+import com.mojang.blaze3d.platform.BlendFactor;
 import com.mojang.serialization.Codec;
 import org.joml.Vector4f;
 import org.lwjgl.opengl.GL46C;
@@ -13,35 +12,35 @@ import java.util.Map;
 import java.util.function.Function;
 
 public enum OptiFineBlend {
-    ALPHA("alpha", new BlendFunction(SourceFactor.SRC_ALPHA, DestFactor.ONE_MINUS_SRC_ALPHA), alpha -> {
+    ALPHA("alpha", new BlendFunction(BlendFactor.SRC_ALPHA, BlendFactor.ONE_MINUS_SRC_ALPHA), alpha -> {
         GL46C.glBlendEquation(GL46C.GL_FUNC_ADD);
         return new Vector4f(1.0F, 1.0F, 1.0F, alpha);
     }),
-    ADD("add", new BlendFunction(SourceFactor.SRC_ALPHA, DestFactor.ONE), alpha -> {
+    ADD("add", new BlendFunction(BlendFactor.SRC_ALPHA, BlendFactor.ONE), alpha -> {
         GL46C.glBlendEquation(GL46C.GL_FUNC_ADD);
         return new Vector4f(1.0F, 1.0F, 1.0F, alpha);
     }),
-    SUBTRACT("subtract", new BlendFunction(SourceFactor.ONE_MINUS_DST_COLOR, DestFactor.ZERO), alpha -> {
+    SUBTRACT("subtract", new BlendFunction(BlendFactor.ONE_MINUS_DST_COLOR, BlendFactor.ZERO), alpha -> {
         GL46C.glBlendEquation(GL46C.GL_FUNC_ADD);
         return new Vector4f(alpha, alpha, alpha, 1.0F);
     }),
-    MULTIPLY("multiply", new BlendFunction(SourceFactor.DST_COLOR, DestFactor.ONE_MINUS_SRC_ALPHA), alpha -> {
+    MULTIPLY("multiply", new BlendFunction(BlendFactor.DST_COLOR, BlendFactor.ONE_MINUS_SRC_ALPHA), alpha -> {
         GL46C.glBlendEquation(GL46C.GL_FUNC_ADD);
         return new Vector4f(alpha, alpha, alpha, alpha);
     }),
-    DODGE("dodge", new BlendFunction(SourceFactor.ONE, DestFactor.ONE), alpha -> {
+    DODGE("dodge", new BlendFunction(BlendFactor.ONE, BlendFactor.ONE), alpha -> {
         GL46C.glBlendEquation(GL46C.GL_FUNC_ADD);
         return new Vector4f(alpha, alpha, alpha, 1.0F);
     }),
-    BURN("burn", new BlendFunction(SourceFactor.ZERO, DestFactor.ONE_MINUS_SRC_COLOR), alpha -> {
+    BURN("burn", new BlendFunction(BlendFactor.ZERO, BlendFactor.ONE_MINUS_SRC_COLOR), alpha -> {
         GL46C.glBlendEquation(GL46C.GL_FUNC_ADD);
         return new Vector4f(alpha, alpha, alpha, 1.0F);
     }),
-    SCREEN("screen", new BlendFunction(SourceFactor.ONE, DestFactor.ONE_MINUS_SRC_COLOR), alpha -> {
+    SCREEN("screen", new BlendFunction(BlendFactor.ONE, BlendFactor.ONE_MINUS_SRC_COLOR), alpha -> {
         GL46C.glBlendEquation(GL46C.GL_FUNC_ADD);
         return new Vector4f(alpha, alpha, alpha, 1.0F);
     }),
-    OVERLAY("overlay", new BlendFunction(SourceFactor.DST_COLOR, DestFactor.SRC_COLOR), alpha -> {
+    OVERLAY("overlay", new BlendFunction(BlendFactor.DST_COLOR, BlendFactor.SRC_COLOR), alpha -> {
         GL46C.glBlendEquation(GL46C.GL_FUNC_ADD);
         return new Vector4f(alpha, alpha, alpha, 1.0F);
     }),

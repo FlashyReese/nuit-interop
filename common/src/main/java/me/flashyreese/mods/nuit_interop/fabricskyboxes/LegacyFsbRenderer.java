@@ -39,6 +39,14 @@ public final class LegacyFsbRenderer {
         return NuitRenderBackend.createDynamicTransforms(modelViewMatrix, colorModifier);
     }
 
+    public static ByteBufferBuilder byteBufferBuilder(RenderPipeline pipeline, int vertexCount) {
+        return NuitRenderPipelines.byteBufferBuilder(pipeline, vertexCount);
+    }
+
+    public static BufferBuilder bufferBuilder(ByteBufferBuilder byteBufferBuilder, RenderPipeline pipeline) {
+        return NuitRenderPipelines.bufferBuilder(byteBufferBuilder, pipeline);
+    }
+
     public static void drawTexturedMesh(RenderPipeline pipeline, MeshData meshData, GpuBufferSlice dynamicTransforms, Identifier textureId) {
         GpuTextureView textureView;
         GpuSampler sampler;
@@ -63,8 +71,8 @@ public final class LegacyFsbRenderer {
     }
 
     static void drawTexturedQuad(RenderPipeline pipeline, GpuBufferSlice dynamicTransforms, Matrix4f matrix4f, Identifier textureId, UVRange uvRange) {
-        try (ByteBufferBuilder byteBufferBuilder = new ByteBufferBuilder(pipeline.getVertexFormat().getVertexSize() * 4)) {
-            BufferBuilder builder = new BufferBuilder(byteBufferBuilder, pipeline.getVertexFormatMode(), pipeline.getVertexFormat());
+        try (ByteBufferBuilder byteBufferBuilder = byteBufferBuilder(pipeline, 4)) {
+            BufferBuilder builder = bufferBuilder(byteBufferBuilder, pipeline);
             builder.addVertex(matrix4f, -100.0F, -100.0F, -100.0F).setUv(uvRange.minU(), uvRange.minV());
             builder.addVertex(matrix4f, -100.0F, -100.0F, 100.0F).setUv(uvRange.minU(), uvRange.maxV());
             builder.addVertex(matrix4f, 100.0F, -100.0F, 100.0F).setUv(uvRange.maxU(), uvRange.maxV());
@@ -75,8 +83,8 @@ public final class LegacyFsbRenderer {
     }
 
     public static void drawCelestialQuad(RenderPipeline pipeline, GpuBufferSlice dynamicTransforms, Identifier textureId, float size, float y, UVRange uvRange) {
-        try (ByteBufferBuilder byteBufferBuilder = new ByteBufferBuilder(pipeline.getVertexFormat().getVertexSize() * 4)) {
-            BufferBuilder builder = new BufferBuilder(byteBufferBuilder, pipeline.getVertexFormatMode(), pipeline.getVertexFormat());
+        try (ByteBufferBuilder byteBufferBuilder = byteBufferBuilder(pipeline, 4)) {
+            BufferBuilder builder = bufferBuilder(byteBufferBuilder, pipeline);
             builder.addVertex(-size, y, -size).setUv(uvRange.minU(), uvRange.minV());
             builder.addVertex(size, y, -size).setUv(uvRange.maxU(), uvRange.minV());
             builder.addVertex(size, y, size).setUv(uvRange.maxU(), uvRange.maxV());

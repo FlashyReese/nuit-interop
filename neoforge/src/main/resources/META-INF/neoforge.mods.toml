@@ -16,14 +16,14 @@ logoFile = "assets/nuit_interop/icon.png"
 [[dependencies.nuit_interop]]
 modId = "neoforge"
 type = "required"
-versionRange = "[26.1.0,26.2.0)"
+versionRange = "[26.2.0,26.3.0)"
 ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.nuit_interop]]
 modId = "minecraft"
 type = "required"
-versionRange = "[26.1.0,26.2.0)"
+versionRange = "[26.2.0,26.3.0)"
 ordering = "NONE"
 side = "BOTH"
 

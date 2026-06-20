@@ -41,8 +41,8 @@ public class LegacyMonoColorSkybox extends LegacyAbstractSkybox {
 
         RenderPipeline pipeline = LegacyFsbRenderer.monoPipeline(this.blend.getBlendFunction());
         GpuBufferSlice dynamicTransforms = NuitRenderBackend.createDynamicTransforms(new Matrix4f(context.skyModelViewStack()), this.blend.getColorModifier(this.alpha));
-        try (ByteBufferBuilder byteBufferBuilder = new ByteBufferBuilder(pipeline.getVertexFormat().getVertexSize() * 24)) {
-            BufferBuilder builder = new BufferBuilder(byteBufferBuilder, pipeline.getVertexFormatMode(), pipeline.getVertexFormat());
+        try (ByteBufferBuilder byteBufferBuilder = LegacyFsbRenderer.byteBufferBuilder(pipeline, 24)) {
+            BufferBuilder builder = LegacyFsbRenderer.bufferBuilder(byteBufferBuilder, pipeline);
             for (int face = 0; face < 6; ++face) {
                 Matrix4f matrix4f = Utils.getMatrixForRotatedFace(face);
                 builder.addVertex(matrix4f, -100.0F, -100.0F, -100.0F).setColor(this.color.getRed(), this.color.getGreen(), this.color.getBlue(), this.color.getAlpha());

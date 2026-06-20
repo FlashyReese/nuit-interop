@@ -61,8 +61,8 @@ public class LegacyOverworldSkybox extends LegacyAbstractSkybox {
             matrix4fStack.rotate(Axis.ZP.rotationDegrees(90.0F));
 
             RenderPipeline pipeline = RenderPipelines.SUNRISE_SUNSET;
-            try (ByteBufferBuilder byteBufferBuilder = new ByteBufferBuilder(pipeline.getVertexFormat().getVertexSize() * 17)) {
-                BufferBuilder bufferBuilder = new BufferBuilder(byteBufferBuilder, pipeline.getVertexFormatMode(), pipeline.getVertexFormat());
+            try (ByteBufferBuilder byteBufferBuilder = LegacyFsbRenderer.byteBufferBuilder(pipeline, 17)) {
+                BufferBuilder bufferBuilder = LegacyFsbRenderer.bufferBuilder(byteBufferBuilder, pipeline);
                 int alpha = (int) (((sunriseOrSunsetColor >>> 24) & 0xFF) * this.alpha);
                 int color = (sunriseOrSunsetColor & 0x00FFFFFF) | (alpha << 24);
                 int transparentColor = color & 0x00FFFFFF;

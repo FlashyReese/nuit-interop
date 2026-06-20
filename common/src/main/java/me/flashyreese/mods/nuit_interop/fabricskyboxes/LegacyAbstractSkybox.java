@@ -140,10 +140,10 @@ public abstract class LegacyAbstractSkybox implements NuitSkybox, SkyboxTextureP
     protected boolean checkEffects() {
         Minecraft client = Minecraft.getInstance();
         Objects.requireNonNull(client.level);
-        Camera camera = client.gameRenderer.getMainCamera();
+        Camera camera = client.gameRenderer.mainCamera();
 
         if (this.legacyConditions.effects().isEmpty()) {
-            boolean thickFog = client.gui.getBossOverlay().shouldCreateWorldFog();
+            boolean thickFog = client.gui.hud.getBossOverlay().shouldCreateWorldFog();
             if (thickFog) {
                 return this.legacyProperties.renderInThickFog();
             }

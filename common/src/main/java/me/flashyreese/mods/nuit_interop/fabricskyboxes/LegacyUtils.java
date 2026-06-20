@@ -1,12 +1,10 @@
 package me.flashyreese.mods.nuit_interop.fabricskyboxes;
 
-import com.mojang.blaze3d.platform.DestFactor;
-import com.mojang.blaze3d.platform.SourceFactor;
 import com.mojang.serialization.Codec;
 import me.flashyreese.mods.nuit.components.RangeEntry;
 import me.flashyreese.mods.nuit.components.UVRange;
+import me.flashyreese.mods.nuit.util.Utils;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.util.Tuple;
 import net.minecraft.util.Mth;
 
 import java.util.List;
@@ -71,19 +69,19 @@ final class LegacyUtils {
     }
 
     static float calculateKeyFrameAlphaValue(Map<Long, Float> keyFrames, long duration, long currentTime) {
-        Optional<Tuple<Long, Long>> closestKeyframes = me.flashyreese.mods.nuit.util.Utils.findClosestKeyframes(keyFrames, currentTime);
+        Optional<Utils.KeyframePair> closestKeyframes = Utils.findClosestKeyframes(keyFrames, currentTime);
         if (closestKeyframes.isEmpty()) {
             return 1.0F;
         }
 
-        Tuple<Long, Long> frames = closestKeyframes.get();
-        return me.flashyreese.mods.nuit.util.Utils.calculateInterpolatedAlpha(
+        Utils.KeyframePair frames = closestKeyframes.get();
+        return Utils.calculateInterpolatedAlpha(
                 currentTime,
                 duration,
-                frames.getA(),
-                frames.getB(),
-                keyFrames.get(frames.getA()),
-                keyFrames.get(frames.getB())
+                frames.current(),
+                frames.next(),
+                keyFrames.get(frames.current()),
+                keyFrames.get(frames.next())
         );
     }
 

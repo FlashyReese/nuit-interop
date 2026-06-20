@@ -6,8 +6,8 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import me.flashyreese.mods.nuit.util.Utils;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.util.Tuple;
 import org.joml.Matrix4fStack;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
@@ -109,20 +109,20 @@ public record LegacyRotation(boolean skyboxRotation, Vector3f staticRot, Vector3
         Quaternionf resultRot = new Quaternionf();
         Quaternionf mappingRot = new Quaternionf();
 
-        Optional<Tuple<Long, Long>> possibleAxisKeyframes = me.flashyreese.mods.nuit.util.Utils.findClosestKeyframes(this.axis, currentTime);
+        Optional<Utils.KeyframePair> possibleAxisKeyframes = Utils.findClosestKeyframes(this.axis, currentTime);
         possibleAxisKeyframes.ifPresent(axisKeyframe -> {
             Quaternionf axisRot = new Quaternionf();
-            mappingRot.mul(me.flashyreese.mods.nuit.util.Utils.interpolateQuatKeyframes(this.axis, axisKeyframe, currentTime, this.duration), axisRot);
+            mappingRot.mul(Utils.interpolateQuatKeyframes(this.axis, axisKeyframe, currentTime, this.duration), axisRot);
             resultRot.mul(axisRot);
 
-            double timeRotation = me.flashyreese.mods.nuit.util.Utils.calculateRotation(this.speed, this.skyboxRotation, level);
+            double timeRotation = Utils.calculateRotation(this.speed, this.skyboxRotation, level);
             resultRot.mul(Axis.YP.rotationDegrees((float) timeRotation).mul(mappingRot));
             resultRot.mul(axisRot.conjugate());
         });
 
-        Optional<Tuple<Long, Long>> possibleMappingKeyframes = me.flashyreese.mods.nuit.util.Utils.findClosestKeyframes(this.mapping, currentTime);
+        Optional<Utils.KeyframePair> possibleMappingKeyframes = Utils.findClosestKeyframes(this.mapping, currentTime);
         possibleMappingKeyframes.ifPresent(mappingKeyframe -> {
-            mappingRot.set(me.flashyreese.mods.nuit.util.Utils.interpolateQuatKeyframes(this.mapping, mappingKeyframe, currentTime, this.duration));
+            mappingRot.set(Utils.interpolateQuatKeyframes(this.mapping, mappingKeyframe, currentTime, this.duration));
             resultRot.mul(mappingRot);
         });
 

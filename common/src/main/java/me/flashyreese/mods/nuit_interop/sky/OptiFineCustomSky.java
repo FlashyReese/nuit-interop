@@ -125,8 +125,8 @@ public class OptiFineCustomSky implements RenderableSkybox, SkyboxTextureProvide
             matrix4fStack.rotate(Axis.ZP.rotationDegrees(90.0F));
 
             RenderPipeline pipeline = RenderPipelines.SUNRISE_SUNSET;
-            try (ByteBufferBuilder byteBufferBuilder = new ByteBufferBuilder(pipeline.getVertexFormat().getVertexSize() * 17)) {
-                BufferBuilder bufferBuilder = new BufferBuilder(byteBufferBuilder, pipeline.getVertexFormatMode(), pipeline.getVertexFormat());
+            try (ByteBufferBuilder byteBufferBuilder = LegacyFsbRenderer.byteBufferBuilder(pipeline, 17)) {
+                BufferBuilder bufferBuilder = LegacyFsbRenderer.bufferBuilder(byteBufferBuilder, pipeline);
                 bufferBuilder.addVertex(matrix4fStack, 0.0F, 100.0F, 0.0F).setColor(sunriseOrSunsetColor);
                 int transparentColor = sunriseOrSunsetColor & 0x00FFFFFF;
                 float alpha = ((sunriseOrSunsetColor >>> 24) & 0xFF) / 255.0F;
@@ -173,8 +173,8 @@ public class OptiFineCustomSky implements RenderableSkybox, SkyboxTextureProvide
 
     private void renderEndSkyTexture(SkyboxRenderContext context) {
         RenderPipeline pipeline = RenderPipelines.END_SKY;
-        try (ByteBufferBuilder byteBufferBuilder = new ByteBufferBuilder(pipeline.getVertexFormat().getVertexSize() * 24)) {
-            BufferBuilder builder = new BufferBuilder(byteBufferBuilder, pipeline.getVertexFormatMode(), pipeline.getVertexFormat());
+        try (ByteBufferBuilder byteBufferBuilder = LegacyFsbRenderer.byteBufferBuilder(pipeline, 24)) {
+            BufferBuilder builder = LegacyFsbRenderer.bufferBuilder(byteBufferBuilder, pipeline);
             for (int face = 0; face < 6; ++face) {
                 Matrix4f matrix4f = Utils.getMatrixForRotatedFace(face);
                 builder.addVertex(matrix4f, -100.0F, -100.0F, -100.0F).setUv(0.0F, 0.0F).setColor(0xFF282828);

@@ -31,8 +31,8 @@ public class LegacyEndSkybox extends LegacyAbstractSkybox {
     public void render(SkyboxRenderContext context) {
         context.applyFog();
         RenderPipeline pipeline = RenderPipelines.END_SKY;
-        try (ByteBufferBuilder byteBufferBuilder = new ByteBufferBuilder(pipeline.getVertexFormat().getVertexSize() * 24)) {
-            BufferBuilder builder = new BufferBuilder(byteBufferBuilder, pipeline.getVertexFormatMode(), pipeline.getVertexFormat());
+        try (ByteBufferBuilder byteBufferBuilder = LegacyFsbRenderer.byteBufferBuilder(pipeline, 24)) {
+            BufferBuilder builder = LegacyFsbRenderer.bufferBuilder(byteBufferBuilder, pipeline);
             for (int face = 0; face < 6; ++face) {
                 int color = 0x282828 | ((int) (255.0F * this.alpha) << 24);
                 Matrix4f matrix4f = Utils.getMatrixForRotatedFace(face);

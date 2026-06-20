@@ -58,8 +58,8 @@ public class LegacyMultiTextureSkybox extends LegacyTexturedSkybox {
     }
 
     private void drawPartial(RenderPipeline pipeline, GpuBufferSlice dynamicTransforms, Matrix4f matrix4f, Texture texture, UVRange position, UVRange uv) {
-        try (ByteBufferBuilder byteBufferBuilder = new ByteBufferBuilder(pipeline.getVertexFormat().getVertexSize() * 4)) {
-            BufferBuilder builder = new BufferBuilder(byteBufferBuilder, pipeline.getVertexFormatMode(), pipeline.getVertexFormat());
+        try (ByteBufferBuilder byteBufferBuilder = LegacyFsbRenderer.byteBufferBuilder(pipeline, 4)) {
+            BufferBuilder builder = LegacyFsbRenderer.bufferBuilder(byteBufferBuilder, pipeline);
             builder.addVertex(matrix4f, position.minU(), -this.quadSize, position.minV()).setUv(uv.minU(), uv.minV());
             builder.addVertex(matrix4f, position.minU(), -this.quadSize, position.maxV()).setUv(uv.minU(), uv.maxV());
             builder.addVertex(matrix4f, position.maxU(), -this.quadSize, position.maxV()).setUv(uv.maxU(), uv.maxV());
