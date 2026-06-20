@@ -68,8 +68,8 @@ public abstract class LegacyAbstractSkybox implements NuitSkybox, SkyboxTextureP
     @Override
     public void updateAlpha(ClientLevel level) {
         long currentTime = this.legacyProperties.fade().keyFrames().isEmpty()
-                ? level.getDayTime() % 24000L
-                : level.getDayTime() % this.legacyProperties.fade().duration();
+                ? level.getDefaultClockTime() % 24000L
+                : level.getDefaultClockTime() % this.legacyProperties.fade().duration();
         boolean condition = this.checkConditions();
 
         float fadeAlpha = 1.0F;
@@ -181,7 +181,7 @@ public abstract class LegacyAbstractSkybox implements NuitSkybox, SkyboxTextureP
             return true;
         }
 
-        double currentTime = Objects.requireNonNull(Minecraft.getInstance().level).getDayTime() - this.legacyProperties.fade().startFadeIn();
+        double currentTime = Objects.requireNonNull(Minecraft.getInstance().level).getDefaultClockTime() - this.legacyProperties.fade().startFadeIn();
         double duration = 24000.0D * this.legacyConditions.loop().days();
         while (currentTime < 0.0D) {
             currentTime += duration;

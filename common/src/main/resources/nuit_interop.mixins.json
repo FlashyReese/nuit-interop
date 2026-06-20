@@ -1,7 +1,7 @@
 {
   "required": true,
   "package": "me.flashyreese.mods.nuit_interop.mixin",
-  "compatibilityLevel": "JAVA_21",
+  "compatibilityLevel": "JAVA_25",
   "minVersion": "0.8",
   "client": [
     "MixinSkyboxResourceListener"

@@ -105,7 +105,7 @@ public record LegacyRotation(boolean skyboxRotation, Vector3f staticRot, Vector3
     }
 
     private Quaternionf calculateMappedRotation(ClientLevel level) {
-        long currentTime = Math.floorMod(level.getDayTime(), this.duration);
+        long currentTime = Math.floorMod(level.getDefaultClockTime(), this.duration);
         Quaternionf resultRot = new Quaternionf();
         Quaternionf mappingRot = new Quaternionf();
 

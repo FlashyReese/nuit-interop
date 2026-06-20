@@ -174,7 +174,7 @@ public class OptiFineSkyLayer {
     private float computeRotationDegrees(Level level, float skyAngle) {
         float angleDayStart = 0.0F;
         if (this.speed != (float) Math.round(this.speed)) {
-            long currentWorldDay = (level.getDayTime() + 18000L) / 24000L;
+            long currentWorldDay = (level.getDefaultClockTime() + 18000L) / 24000L;
             double anglePerDay = this.speed % 1.0F;
             double currentAngle = (double) currentWorldDay * anglePerDay;
             angleDayStart = (float) (currentAngle % 1.0D);

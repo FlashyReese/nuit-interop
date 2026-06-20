@@ -128,7 +128,7 @@ final class LegacyUtils {
             return 0.0D;
         }
 
-        long timeOfDay = level.getDayTime() + timeShift;
+        long timeOfDay = level.getDefaultClockTime() + timeShift;
         double rotationFraction = timeOfDay / (24000.0D / rotationSpeed);
         double skyAngle = Mth.positiveModulo(rotationFraction, 1.0D);
         return 360.0D * skyAngle;

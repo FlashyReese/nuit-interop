@@ -1,7 +1,7 @@
 package me.flashyreese.mods.nuit_interop.config;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
@@ -49,9 +49,9 @@ public class NuitInteropConfigScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
-        context.drawCenteredString(this.font, this.title, this.width / 2, 30, 0xFFFFFF);
-        super.render(context, mouseX, mouseY, delta);
+    public void extractRenderState(GuiGraphicsExtractor graphicsExtractor, int mouseX, int mouseY, float delta) {
+        graphicsExtractor.centeredText(this.font, this.title, this.width / 2, 30, 0xFFFFFF);
+        super.extractRenderState(graphicsExtractor, mouseX, mouseY, delta);
     }
 
     @Override

@@ -189,7 +189,7 @@ public class OptiFineCustomSky implements RenderableSkybox, SkyboxTextureProvide
     }
 
     private void renderLayers(Matrix4fStack matrix4fStack, Level level, float tickDelta, float celestialAngle) {
-        long timeOfDay = level.getDayTime();
+        long timeOfDay = level.getDefaultClockTime();
         int clampedTimeOfDay = (int) (timeOfDay % 24000L);
         float rainGradient = level.getRainLevel(tickDelta);
         float thunderGradient = level.getThunderLevel(tickDelta);
