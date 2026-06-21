@@ -25,7 +25,6 @@ import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.level.material.FogType;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fStack;
-import org.lwjgl.opengl.GL46C;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -246,7 +245,6 @@ public abstract class LegacyAbstractSkybox implements NuitSkybox, SkyboxTextureP
             }
         } finally {
             matrix4fStack.popMatrix();
-            GL46C.glBlendEquation(GL46C.GL_FUNC_ADD);
         }
     }
 

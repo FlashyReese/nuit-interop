@@ -112,7 +112,7 @@ public class OptiFineSkyLayer {
             return;
         }
 
-        Vector4f colorModifier = this.blend.applyEquationAndGetColor(finalAlpha);
+        Vector4f colorModifier = this.blend.getColorModifier(finalAlpha);
         RenderPipeline pipeline = LegacyFsbRenderer.texturedPipeline(this.blend.getBlendFunction());
         try (ByteBufferBuilder byteBufferBuilder = LegacyFsbRenderer.byteBufferBuilder(pipeline, 24)) {
             BufferBuilder builder = LegacyFsbRenderer.bufferBuilder(byteBufferBuilder, pipeline);
