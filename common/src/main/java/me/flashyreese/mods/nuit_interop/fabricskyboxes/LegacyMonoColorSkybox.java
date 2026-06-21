@@ -12,7 +12,6 @@ import me.flashyreese.mods.nuit.components.RGBA;
 import me.flashyreese.mods.nuit.render.NuitRenderBackend;
 import me.flashyreese.mods.nuit.util.Utils;
 import org.joml.Matrix4f;
-import org.lwjgl.opengl.GL46C;
 
 public class LegacyMonoColorSkybox extends LegacyAbstractSkybox {
     public static final Codec<LegacyMonoColorSkybox> CODEC = RecordCodecBuilder.create(instance -> instance.group(
@@ -53,7 +52,6 @@ public class LegacyMonoColorSkybox extends LegacyAbstractSkybox {
             NuitRenderBackend.draw(pipeline, builder.buildOrThrow(), dynamicTransforms);
         } finally {
             this.renderDecorations(context, context.skyModelViewStack());
-            GL46C.glBlendEquation(GL46C.GL_FUNC_ADD);
         }
     }
 
