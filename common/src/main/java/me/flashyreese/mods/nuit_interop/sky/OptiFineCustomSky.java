@@ -207,7 +207,13 @@ public class OptiFineCustomSky implements RenderableSkybox, SkyboxTextureProvide
     @Override
     public void tick(ClientLevel clientLevel) {
         this.active = true;
-        if (!clientLevel.dimension().equals(this.worldResourceKey)) {
+        DimensionType dimensionType = clientLevel.dimensionType();
+        if (!OptiFineWorldMatcher.matches(
+                this.worldResourceKey.identifier(),
+                clientLevel.dimension().identifier(),
+                dimensionType.skybox(),
+                dimensionType.cardinalLightType()
+        )) {
             this.layers.forEach(OptiFineSkyLayer::resetPositionAlpha);
             this.active = false;
         } else {
