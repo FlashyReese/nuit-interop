@@ -45,6 +45,6 @@
     "minecraft": "~26.2.0",
     "java": ">=25",
     "fabric-api": "*",
-    "nuit": ">=1.0.0-beta.4"
+    "nuit": "${nuit_version}"
   }
 }
