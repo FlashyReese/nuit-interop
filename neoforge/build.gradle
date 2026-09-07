@@ -45,9 +45,10 @@ dependencies {
 
 processResources {
     inputs.property 'version', project.version
+    inputs.property 'nuit_version', rootProject.nuit_version
 
     filesMatching('META-INF/neoforge.mods.toml') {
-        expand version: project.version
+        expand version: project.version, nuit_version: rootProject.nuit_version
     }
 }
 

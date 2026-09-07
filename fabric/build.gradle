@@ -52,9 +52,10 @@ dependencies {
 
 processResources {
     inputs.property 'version', project.version
+    inputs.property 'nuit_version', rootProject.nuit_version
 
     filesMatching('fabric.mod.json') {
-        expand version: project.version
+        expand version: project.version, nuit_version: rootProject.nuit_version
     }
 }
 
