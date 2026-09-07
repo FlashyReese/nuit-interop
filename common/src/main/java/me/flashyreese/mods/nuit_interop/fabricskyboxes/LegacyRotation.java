@@ -8,7 +8,7 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import me.flashyreese.mods.nuit.util.Utils;
 import net.minecraft.client.multiplayer.ClientLevel;
-import org.joml.Matrix4fStack;
+import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.joml.Vector3i;
@@ -56,28 +56,28 @@ public record LegacyRotation(boolean skyboxRotation, Vector3f staticRot, Vector3
         return new LegacyRotation(skyboxRotation, new Vector3f(), new Vector3f(), new Vector3i(), 0.0F, 0.0F, 0.0F, mapping, axis, Math.max(1L, duration), speed);
     }
 
-    public void apply(Matrix4fStack stack, ClientLevel level) {
+    public Matrix4f apply(Matrix4f matrix, ClientLevel level) {
         if (!this.mapping.isEmpty() || !this.axis.isEmpty()) {
-            stack.rotate(this.calculateMappedRotation(level));
-            return;
+            return matrix.rotate(this.calculateMappedRotation(level));
         }
 
         float timeRotationX = (float) LegacyUtils.calculateRotation(this.rotationSpeedX, this.timeShift.x, this.skyboxRotation, level);
         float timeRotationY = (float) LegacyUtils.calculateRotation(this.rotationSpeedY, this.timeShift.y, this.skyboxRotation, level);
         float timeRotationZ = (float) LegacyUtils.calculateRotation(this.rotationSpeedZ, this.timeShift.z, this.skyboxRotation, level);
 
-        stack.rotate(Axis.XP.rotationDegrees(this.axisRot.x()));
-        stack.rotate(Axis.YP.rotationDegrees(this.axisRot.y()));
-        stack.rotate(Axis.ZP.rotationDegrees(this.axisRot.z()));
-        stack.rotate(Axis.XP.rotationDegrees(timeRotationX));
-        stack.rotate(Axis.YP.rotationDegrees(timeRotationY));
-        stack.rotate(Axis.ZP.rotationDegrees(timeRotationZ));
-        stack.rotate(Axis.ZP.rotationDegrees(-this.axisRot.z()));
-        stack.rotate(Axis.YP.rotationDegrees(-this.axisRot.y()));
-        stack.rotate(Axis.XP.rotationDegrees(-this.axisRot.x()));
-        stack.rotate(Axis.XP.rotationDegrees(this.staticRot.x()));
-        stack.rotate(Axis.YP.rotationDegrees(this.staticRot.y()));
-        stack.rotate(Axis.ZP.rotationDegrees(this.staticRot.z()));
+        return matrix
+                .rotate(Axis.XP.rotationDegrees(this.axisRot.x()))
+                .rotate(Axis.YP.rotationDegrees(this.axisRot.y()))
+                .rotate(Axis.ZP.rotationDegrees(this.axisRot.z()))
+                .rotate(Axis.XP.rotationDegrees(timeRotationX))
+                .rotate(Axis.YP.rotationDegrees(timeRotationY))
+                .rotate(Axis.ZP.rotationDegrees(timeRotationZ))
+                .rotate(Axis.ZP.rotationDegrees(-this.axisRot.z()))
+                .rotate(Axis.YP.rotationDegrees(-this.axisRot.y()))
+                .rotate(Axis.XP.rotationDegrees(-this.axisRot.x()))
+                .rotate(Axis.XP.rotationDegrees(this.staticRot.x()))
+                .rotate(Axis.YP.rotationDegrees(this.staticRot.y()))
+                .rotate(Axis.ZP.rotationDegrees(this.staticRot.z()));
     }
 
     public void apply(PoseStack stack, ClientLevel level) {

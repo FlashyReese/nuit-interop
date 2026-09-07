@@ -14,7 +14,8 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.util.Mth;
 import net.minecraft.world.attribute.EnvironmentAttributes;
-import org.joml.Matrix4fStack;
+import org.joml.Matrix4f;
+import org.joml.Vector4f;
 
 public class LegacyOverworldSkybox extends LegacyAbstractSkybox {
     public static final Codec<LegacyOverworldSkybox> CODEC = RecordCodecBuilder.create(instance -> instance.group(
@@ -30,7 +31,7 @@ public class LegacyOverworldSkybox extends LegacyAbstractSkybox {
     @Override
     public void render(SkyboxRenderContext context) {
         context.applyFog();
-        Matrix4fStack matrix4fStack = context.skyModelViewStack();
+        Matrix4f modelViewMatrix = new Matrix4f(context.skyModelViewStack());
         Camera camera = context.camera();
         float tickDelta = context.tickDelta();
         ClientLevel level = (ClientLevel) camera.entity().level();
@@ -41,10 +42,10 @@ public class LegacyOverworldSkybox extends LegacyAbstractSkybox {
         int alphaColor = (skyColor & 0x00FFFFFF) | ((int) (this.alpha * 255.0F) << 24);
         context.renderSkyDisc(alphaColor);
         if (((sunriseOrSunsetColor >>> 24) & 0xFF) > 0) {
-            this.renderSunriseAndSunset(matrix4fStack, sunAngle, sunriseOrSunsetColor);
+            this.renderSunriseAndSunset(modelViewMatrix, sunAngle, sunriseOrSunsetColor);
         }
 
-        this.renderDecorations(context, matrix4fStack);
+        this.renderDecorations(context, modelViewMatrix);
 
         double eyeHeight = camera.entity().getEyePosition(tickDelta).y - level.getLevelData().getHorizonHeight(level);
         if (eyeHeight < 0.0D) {
@@ -52,33 +53,28 @@ public class LegacyOverworldSkybox extends LegacyAbstractSkybox {
         }
     }
 
-    private void renderSunriseAndSunset(Matrix4fStack matrix4fStack, float sunAngle, int sunriseOrSunsetColor) {
-        matrix4fStack.pushMatrix();
-        try {
-            matrix4fStack.rotate(Axis.XP.rotationDegrees(90.0F));
-            float zRotation = Mth.sin(sunAngle) < 0.0F ? 180.0F : 0.0F;
-            matrix4fStack.rotate(Axis.ZP.rotationDegrees(zRotation));
-            matrix4fStack.rotate(Axis.ZP.rotationDegrees(90.0F));
+    private void renderSunriseAndSunset(Matrix4f modelViewMatrix, float sunAngle, int sunriseOrSunsetColor) {
+        float zRotation = Mth.sin(sunAngle) < 0.0F ? 180.0F : 0.0F;
+        Matrix4f sunriseModelViewMatrix = new Matrix4f(modelViewMatrix)
+                .rotate(Axis.XP.rotationDegrees(90.0F))
+                .rotate(Axis.ZP.rotationDegrees(zRotation + 90.0F));
 
-            RenderPipeline pipeline = RenderPipelines.SUNRISE_SUNSET;
-            try (ByteBufferBuilder byteBufferBuilder = LegacyFsbRenderer.byteBufferBuilder(pipeline, 17)) {
-                BufferBuilder bufferBuilder = LegacyFsbRenderer.bufferBuilder(byteBufferBuilder, pipeline);
-                int alpha = (int) (((sunriseOrSunsetColor >>> 24) & 0xFF) * this.alpha);
-                int color = (sunriseOrSunsetColor & 0x00FFFFFF) | (alpha << 24);
-                int transparentColor = color & 0x00FFFFFF;
-                bufferBuilder.addVertex(matrix4fStack, 0.0F, 100.0F, 0.0F).setColor(color);
-                for (int i = 0; i <= 16; i++) {
-                    float angleRadians = (float) i * ((float) Math.PI * 2.0F) / 16.0F;
-                    float x = Mth.sin(angleRadians);
-                    float y = Mth.cos(angleRadians);
-                    float z = -y * 40.0F * (alpha / 255.0F);
-                    bufferBuilder.addVertex(matrix4fStack, x * 120.0F, y * 120.0F, z).setColor(transparentColor);
-                }
-                GpuBufferSlice dynamicTransforms = NuitRenderBackend.createDynamicTransforms();
-                NuitRenderBackend.draw(pipeline, bufferBuilder.buildOrThrow(), dynamicTransforms);
+        RenderPipeline pipeline = RenderPipelines.SUNRISE_SUNSET;
+        try (ByteBufferBuilder byteBufferBuilder = LegacyFsbRenderer.byteBufferBuilder(pipeline, 18)) {
+            BufferBuilder bufferBuilder = LegacyFsbRenderer.bufferBuilder(byteBufferBuilder, pipeline);
+            int alpha = (int) (((sunriseOrSunsetColor >>> 24) & 0xFF) * this.alpha);
+            int color = (sunriseOrSunsetColor & 0x00FFFFFF) | (alpha << 24);
+            int transparentColor = color & 0x00FFFFFF;
+            bufferBuilder.addVertex(0.0F, 100.0F, 0.0F).setColor(color);
+            for (int i = 0; i <= 16; i++) {
+                float angleRadians = (float) i * ((float) Math.PI * 2.0F) / 16.0F;
+                float x = Mth.sin(angleRadians);
+                float y = Mth.cos(angleRadians);
+                float z = -y * 40.0F * (alpha / 255.0F);
+                bufferBuilder.addVertex(x * 120.0F, y * 120.0F, z).setColor(transparentColor);
             }
-        } finally {
-            matrix4fStack.popMatrix();
+            GpuBufferSlice dynamicTransforms = NuitRenderBackend.createDynamicTransforms(sunriseModelViewMatrix, new Vector4f(1.0F, 1.0F, 1.0F, 1.0F));
+            NuitRenderBackend.draw(pipeline, bufferBuilder.buildOrThrow(), dynamicTransforms);
         }
     }
 }

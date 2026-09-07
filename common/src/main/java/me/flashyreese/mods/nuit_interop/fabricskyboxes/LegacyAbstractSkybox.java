@@ -24,7 +24,6 @@ import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.level.material.FogType;
 import org.joml.Matrix4f;
-import org.joml.Matrix4fStack;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -217,7 +216,7 @@ public abstract class LegacyAbstractSkybox implements NuitSkybox, SkyboxTextureP
         return this.legacyConditions.weatherExcluded() ^ matches;
     }
 
-    protected void renderDecorations(SkyboxRenderContext context, Matrix4fStack matrix4fStack) {
+    protected void renderDecorations(SkyboxRenderContext context, Matrix4f modelViewMatrix) {
         if (!this.decorations.sunEnabled() && !this.decorations.moonEnabled() && !this.decorations.starsEnabled()) {
             return;
         }
@@ -225,26 +224,21 @@ public abstract class LegacyAbstractSkybox implements NuitSkybox, SkyboxTextureP
         Camera camera = context.camera();
         float tickDelta = context.tickDelta();
         ClientLevel level = Objects.requireNonNull((ClientLevel) camera.entity().level());
-        matrix4fStack.pushMatrix();
-        try {
-            this.decorations.rotation().apply(matrix4fStack, level);
-            GpuBufferSlice dynamicTransforms = NuitRenderBackend.createDynamicTransforms(new Matrix4f(matrix4fStack), this.decorations.blend().getColorModifier(this.alpha));
+        Matrix4f decorationMatrix = this.decorations.rotation().apply(new Matrix4f(modelViewMatrix), level);
+        GpuBufferSlice dynamicTransforms = NuitRenderBackend.createDynamicTransforms(decorationMatrix, this.decorations.blend().getColorModifier(this.alpha));
 
-            if (this.decorations.sunEnabled()) {
-                LegacyFsbRenderer.drawCelestialQuad(LegacyFsbRenderer.celestialPipeline(), dynamicTransforms, this.decorations.sunTexture(), 30.0F, 100.0F, new me.flashyreese.mods.nuit.components.UVRange(0.0F, 0.0F, 1.0F, 1.0F));
-            }
+        if (this.decorations.sunEnabled()) {
+            LegacyFsbRenderer.drawCelestialQuad(LegacyFsbRenderer.celestialPipeline(), dynamicTransforms, this.decorations.sunTexture(), 30.0F, 100.0F, new me.flashyreese.mods.nuit.components.UVRange(0.0F, 0.0F, 1.0F, 1.0F));
+        }
 
-            if (this.decorations.moonEnabled()) {
-                this.renderMoon(camera.attributeProbe().getValue(EnvironmentAttributes.MOON_PHASE, tickDelta), dynamicTransforms);
-            }
+        if (this.decorations.moonEnabled()) {
+            this.renderMoon(camera.attributeProbe().getValue(EnvironmentAttributes.MOON_PHASE, tickDelta), dynamicTransforms);
+        }
 
-            if (this.decorations.starsEnabled()) {
-                PoseStack poseStack = new PoseStack();
-                this.decorations.rotation().apply(poseStack, level);
-                context.renderStars(camera.attributeProbe().getValue(EnvironmentAttributes.STAR_BRIGHTNESS, tickDelta), poseStack);
-            }
-        } finally {
-            matrix4fStack.popMatrix();
+        if (this.decorations.starsEnabled()) {
+            PoseStack poseStack = new PoseStack();
+            this.decorations.rotation().apply(poseStack, level);
+            context.renderStars(camera.attributeProbe().getValue(EnvironmentAttributes.STAR_BRIGHTNESS, tickDelta), poseStack);
         }
     }
 

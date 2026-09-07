@@ -10,7 +10,6 @@ import me.flashyreese.mods.nuit.components.Texture;
 import me.flashyreese.mods.nuit.util.Utils;
 import net.minecraft.resources.Identifier;
 import org.joml.Matrix4f;
-import org.joml.Matrix4fStack;
 
 import java.util.List;
 import java.util.stream.Stream;
@@ -32,7 +31,7 @@ public class LegacySquareTexturedSkybox extends LegacyTexturedSkybox {
     }
 
     @Override
-    protected void renderTexturedSkybox(SkyboxRenderContext context, Matrix4fStack matrix4fStack, RenderPipeline pipeline, GpuBufferSlice dynamicTransforms) {
+    protected void renderTexturedSkybox(SkyboxRenderContext context, Matrix4f modelViewMatrix, RenderPipeline pipeline, GpuBufferSlice dynamicTransforms) {
         for (int face = 0; face < 6; ++face) {
             Texture texture = this.textures.byId(face);
             Matrix4f matrix4f = Utils.getMatrixForRotatedFace(face);
