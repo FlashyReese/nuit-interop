@@ -1,16 +1,11 @@
 package me.flashyreese.mods.nuit_interop.fabricskyboxes;
 
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
-import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import me.flashyreese.mods.nuit.api.skyboxes.SkyboxRenderContext;
 import me.flashyreese.mods.nuit.components.Blend;
 import me.flashyreese.mods.nuit.components.Texture;
-import me.flashyreese.mods.nuit.util.Utils;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import org.joml.Matrix4f;
-import org.joml.Matrix4fStack;
 
 import java.util.List;
 import java.util.stream.Stream;
@@ -32,10 +27,10 @@ public class LegacySingleSpriteSquareTexturedSkybox extends LegacyTexturedSkybox
     }
 
     @Override
-    protected void renderTexturedSkybox(SkyboxRenderContext context, Matrix4fStack matrix4fStack, RenderPipeline pipeline, GpuBufferSlice dynamicTransforms) {
+    protected void renderTexturedSkybox(Matrix4f modelViewMatrix) {
         for (int face = 0; face < 6; ++face) {
-            Matrix4f matrix4f = Utils.getMatrixForRotatedFace(face);
-            LegacyFsbRenderer.drawTexturedQuad(pipeline, dynamicTransforms, matrix4f, this.texture.getTextureId(), LegacyUVRanges.SINGLE_SPRITE.byId(face));
+            Matrix4f faceMatrix = LegacyFsbRenderer.getMatrixForRotatedFace(face);
+            LegacyFsbRenderer.drawTexturedQuad(modelViewMatrix, faceMatrix, this.texture.getTextureId(), LegacyUVRanges.SINGLE_SPRITE.byId(face));
         }
     }
 
@@ -44,7 +39,7 @@ public class LegacySingleSpriteSquareTexturedSkybox extends LegacyTexturedSkybox
     }
 
     @Override
-    public List<Identifier> getTexturesToRegister() {
+    public List<ResourceLocation> getTexturesToRegister() {
         return Stream.concat(super.getTexturesToRegister().stream(), Stream.of(this.texture.getTextureId()))
                 .distinct()
                 .toList();

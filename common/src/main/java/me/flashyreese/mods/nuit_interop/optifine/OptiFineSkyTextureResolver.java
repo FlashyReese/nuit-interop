@@ -1,8 +1,8 @@
 package me.flashyreese.mods.nuit_interop.optifine;
 
 import me.flashyreese.mods.nuit_interop.utils.ResourceManagerHelper;
-import net.minecraft.IdentifierException;
-import net.minecraft.resources.Identifier;
+import net.minecraft.ResourceLocationException;
+import net.minecraft.resources.ResourceLocation;
 
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -13,9 +13,9 @@ import java.util.regex.Pattern;
 final class OptiFineSkyTextureResolver {
     private static final Pattern SKY_PROPERTIES = Pattern.compile("sky(\\d+)\\.properties$");
 
-    static Identifier resolve(String source, ResourceManagerHelper resourceManager, Identifier propertiesId) {
+    static ResourceLocation resolve(String source, ResourceManagerHelper resourceManager, ResourceLocation propertiesId) {
         for (String candidate : sourceCandidates(source, propertiesId)) {
-            Identifier textureId = toTextureId(candidate, propertiesId);
+            ResourceLocation textureId = toTextureId(candidate, propertiesId);
             if (textureId != null && exists(resourceManager, textureId)) {
                 return textureId;
             }
@@ -23,7 +23,7 @@ final class OptiFineSkyTextureResolver {
         return null;
     }
 
-    private static List<String> sourceCandidates(String source, Identifier propertiesId) {
+    private static List<String> sourceCandidates(String source, ResourceLocation propertiesId) {
         List<String> candidates = new ArrayList<>();
         if (source != null) {
             candidates.add(source);
@@ -38,7 +38,7 @@ final class OptiFineSkyTextureResolver {
         return candidates;
     }
 
-    private static Identifier toTextureId(String source, Identifier propertiesId) {
+    private static ResourceLocation toTextureId(String source, ResourceLocation propertiesId) {
         String sourcePath = source.trim();
         if (sourcePath.isEmpty()) {
             return null;
@@ -56,7 +56,7 @@ final class OptiFineSkyTextureResolver {
             return buildId(assetParts[1], assetParts[2]);
         }
 
-        Identifier explicitId = Identifier.tryParse(path);
+        ResourceLocation explicitId = ResourceLocation.tryParse(path);
         if (explicitId != null && path.contains(":")) {
             return explicitId;
         }
@@ -84,7 +84,7 @@ final class OptiFineSkyTextureResolver {
         return path;
     }
 
-    private static boolean exists(ResourceManagerHelper resourceManager, Identifier textureId) {
+    private static boolean exists(ResourceManagerHelper resourceManager, ResourceLocation textureId) {
         try (InputStream stream = resourceManager.getInputStream(textureId)) {
             return stream != null;
         } catch (Exception e) {
@@ -92,15 +92,15 @@ final class OptiFineSkyTextureResolver {
         }
     }
 
-    private static Identifier buildId(String namespace, String path) {
+    private static ResourceLocation buildId(String namespace, String path) {
         try {
-            return Identifier.tryBuild(namespace, path);
-        } catch (IdentifierException e) {
+            return ResourceLocation.tryBuild(namespace, path);
+        } catch (ResourceLocationException e) {
             return null;
         }
     }
 
-    private static String defaultNumericSource(Identifier propertiesId) {
+    private static String defaultNumericSource(ResourceLocation propertiesId) {
         Matcher matcher = SKY_PROPERTIES.matcher(fileName(propertiesId.getPath()));
         if (matcher.matches()) {
             return matcher.group(1) + ".png";

@@ -1,14 +1,14 @@
 package me.flashyreese.mods.nuit_interop.fabricskyboxes;
 
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
-import com.mojang.blaze3d.pipeline.RenderPipeline;
-import me.flashyreese.mods.nuit.api.skyboxes.SkyboxRenderContext;
+import com.mojang.blaze3d.vertex.PoseStack;
 import me.flashyreese.mods.nuit.components.Blend;
+import me.flashyreese.mods.nuit.mixin.SkyRendererAccessor;
+import me.flashyreese.mods.nuit.render.NuitRenderBackend;
+import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.renderer.GameRenderer;
 import org.joml.Matrix4f;
-import org.joml.Matrix4fStack;
-import org.lwjgl.opengl.GL46C;
 
 import java.util.Objects;
 
@@ -23,28 +23,25 @@ public abstract class LegacyTexturedSkybox extends LegacyAbstractSkybox {
     }
 
     @Override
-    public final void render(SkyboxRenderContext context) {
-        context.applyFog();
+    public final void render(SkyRendererAccessor skyRendererAccessor, PoseStack poseStack, Matrix4f projectionMatrix,
+                             float tickDelta, Camera camera, boolean thickFog, Runnable fogCallback) {
+        fogCallback.run();
         if (this.alpha <= 0.0F) {
             return;
         }
 
         ClientLevel level = Objects.requireNonNull(Minecraft.getInstance().level);
-        Matrix4fStack matrix4fStack = context.skyModelViewStack();
-        matrix4fStack.pushMatrix();
+        Matrix4f modelViewMatrix = this.rotation.apply(new Matrix4f(poseStack.last().pose()), level);
         try {
-            this.rotation.apply(matrix4fStack, level);
-            RenderPipeline pipeline = LegacyFsbRenderer.texturedPipeline(this.blend.getBlendFunction());
-            GpuBufferSlice dynamicTransforms = LegacyFsbRenderer.dynamicTransforms(new Matrix4f(matrix4fStack), this.blend, this.alpha);
-            this.renderTexturedSkybox(context, matrix4fStack, pipeline, dynamicTransforms);
-            this.renderDecorations(context, matrix4fStack);
+            NuitRenderBackend.beginSkybox(this.blend, this.alpha, GameRenderer::getPositionTexShader);
+            this.renderTexturedSkybox(modelViewMatrix);
         } finally {
-            matrix4fStack.popMatrix();
-            GL46C.glBlendEquation(GL46C.GL_FUNC_ADD);
+            NuitRenderBackend.endSkybox();
         }
+        this.renderDecorations(skyRendererAccessor, modelViewMatrix, projectionMatrix, tickDelta, camera, fogCallback);
     }
 
-    protected abstract void renderTexturedSkybox(SkyboxRenderContext context, Matrix4fStack matrix4fStack, RenderPipeline pipeline, GpuBufferSlice dynamicTransforms);
+    protected abstract void renderTexturedSkybox(Matrix4f modelViewMatrix);
 
     public Blend getBlend() {
         return this.blend;

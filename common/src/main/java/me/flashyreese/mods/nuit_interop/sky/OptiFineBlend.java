@@ -1,53 +1,26 @@
 package me.flashyreese.mods.nuit_interop.sky;
 
 import com.google.common.collect.ImmutableMap;
-import com.mojang.blaze3d.pipeline.BlendFunction;
-import com.mojang.blaze3d.platform.DestFactor;
-import com.mojang.blaze3d.platform.SourceFactor;
+import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.serialization.Codec;
-import org.joml.Vector4f;
-import org.lwjgl.opengl.GL46C;
 
 import java.util.Locale;
 import java.util.Map;
-import java.util.function.Function;
+import java.util.function.Consumer;
 
 public enum OptiFineBlend {
-    ALPHA("alpha", new BlendFunction(SourceFactor.SRC_ALPHA, DestFactor.ONE_MINUS_SRC_ALPHA), alpha -> {
-        GL46C.glBlendEquation(GL46C.GL_FUNC_ADD);
-        return new Vector4f(1.0F, 1.0F, 1.0F, alpha);
-    }),
-    ADD("add", new BlendFunction(SourceFactor.SRC_ALPHA, DestFactor.ONE), alpha -> {
-        GL46C.glBlendEquation(GL46C.GL_FUNC_ADD);
-        return new Vector4f(1.0F, 1.0F, 1.0F, alpha);
-    }),
-    SUBTRACT("subtract", new BlendFunction(SourceFactor.ONE_MINUS_DST_COLOR, DestFactor.ZERO), alpha -> {
-        GL46C.glBlendEquation(GL46C.GL_FUNC_ADD);
-        return new Vector4f(alpha, alpha, alpha, 1.0F);
-    }),
-    MULTIPLY("multiply", new BlendFunction(SourceFactor.DST_COLOR, DestFactor.ONE_MINUS_SRC_ALPHA), alpha -> {
-        GL46C.glBlendEquation(GL46C.GL_FUNC_ADD);
-        return new Vector4f(alpha, alpha, alpha, alpha);
-    }),
-    DODGE("dodge", new BlendFunction(SourceFactor.ONE, DestFactor.ONE), alpha -> {
-        GL46C.glBlendEquation(GL46C.GL_FUNC_ADD);
-        return new Vector4f(alpha, alpha, alpha, 1.0F);
-    }),
-    BURN("burn", new BlendFunction(SourceFactor.ZERO, DestFactor.ONE_MINUS_SRC_COLOR), alpha -> {
-        GL46C.glBlendEquation(GL46C.GL_FUNC_ADD);
-        return new Vector4f(alpha, alpha, alpha, 1.0F);
-    }),
-    SCREEN("screen", new BlendFunction(SourceFactor.ONE, DestFactor.ONE_MINUS_SRC_COLOR), alpha -> {
-        GL46C.glBlendEquation(GL46C.GL_FUNC_ADD);
-        return new Vector4f(alpha, alpha, alpha, 1.0F);
-    }),
-    OVERLAY("overlay", new BlendFunction(SourceFactor.DST_COLOR, DestFactor.SRC_COLOR), alpha -> {
-        GL46C.glBlendEquation(GL46C.GL_FUNC_ADD);
-        return new Vector4f(alpha, alpha, alpha, 1.0F);
-    }),
-    REPLACE("replace", null, alpha -> {
-        GL46C.glBlendEquation(GL46C.GL_FUNC_ADD);
-        return new Vector4f(1.0F, 1.0F, 1.0F, alpha);
+    ALPHA("alpha", blend(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, alpha -> RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, alpha))),
+    ADD("add", blend(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE, alpha -> RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, alpha))),
+    SUBTRACT("subtract", blend(GlStateManager.SourceFactor.ONE_MINUS_DST_COLOR, GlStateManager.DestFactor.ZERO, alpha -> RenderSystem.setShaderColor(alpha, alpha, alpha, 1.0F))),
+    MULTIPLY("multiply", blend(GlStateManager.SourceFactor.DST_COLOR, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, alpha -> RenderSystem.setShaderColor(alpha, alpha, alpha, alpha))),
+    DODGE("dodge", blend(GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE, alpha -> RenderSystem.setShaderColor(alpha, alpha, alpha, 1.0F))),
+    BURN("burn", blend(GlStateManager.SourceFactor.ZERO, GlStateManager.DestFactor.ONE_MINUS_SRC_COLOR, alpha -> RenderSystem.setShaderColor(alpha, alpha, alpha, 1.0F))),
+    SCREEN("screen", blend(GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ONE_MINUS_SRC_COLOR, alpha -> RenderSystem.setShaderColor(alpha, alpha, alpha, 1.0F))),
+    OVERLAY("overlay", blend(GlStateManager.SourceFactor.DST_COLOR, GlStateManager.DestFactor.SRC_COLOR, alpha -> RenderSystem.setShaderColor(alpha, alpha, alpha, 1.0F))),
+    REPLACE("replace", alpha -> {
+        RenderSystem.disableBlend();
+        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, alpha);
     });
 
     public static final Codec<OptiFineBlend> CODEC = Codec.STRING.xmap(OptiFineBlend::byName, OptiFineBlend::toString);
@@ -62,13 +35,19 @@ public enum OptiFineBlend {
     }
 
     private final String name;
-    private final BlendFunction blendFunction;
-    private final Function<Float, Vector4f> colorAndEquationFunc;
+    private final Consumer<Float> blendFunction;
 
-    OptiFineBlend(String name, BlendFunction blendFunction, Function<Float, Vector4f> colorAndEquationFunc) {
+    OptiFineBlend(String name, Consumer<Float> blendFunction) {
         this.name = name;
         this.blendFunction = blendFunction;
-        this.colorAndEquationFunc = colorAndEquationFunc;
+    }
+
+    private static Consumer<Float> blend(GlStateManager.SourceFactor source, GlStateManager.DestFactor destination, Consumer<Float> colorModifier) {
+        return alpha -> {
+            RenderSystem.enableBlend();
+            RenderSystem.blendFunc(source, destination);
+            colorModifier.accept(alpha);
+        };
     }
 
     public static OptiFineBlend byName(String name) {
@@ -78,16 +57,12 @@ public enum OptiFineBlend {
         return VALUES.getOrDefault(name.toLowerCase(Locale.ROOT).trim(), ADD);
     }
 
+    public void apply(float alpha) {
+        this.blendFunction.accept(alpha);
+    }
+
     public String getName() {
-        return name;
-    }
-
-    public BlendFunction getBlendFunction() {
-        return this.blendFunction;
-    }
-
-    public Vector4f applyEquationAndGetColor(float alpha) {
-        return this.colorAndEquationFunc.apply(alpha);
+        return this.name;
     }
 
     @Override

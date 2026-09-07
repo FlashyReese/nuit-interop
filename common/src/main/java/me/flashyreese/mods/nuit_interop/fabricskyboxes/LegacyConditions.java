@@ -6,13 +6,13 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import me.flashyreese.mods.nuit.components.Condition;
 import me.flashyreese.mods.nuit.components.Conditions;
 import me.flashyreese.mods.nuit.components.RangeEntry;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public record LegacyConditions(List<Identifier> biomes, List<Identifier> worlds, List<Identifier> dimensions,
-                               List<Identifier> effects, List<LegacyWeather> weathers,
+public record LegacyConditions(List<ResourceLocation> biomes, List<ResourceLocation> worlds, List<ResourceLocation> dimensions,
+                               List<ResourceLocation> effects, List<LegacyWeather> weathers,
                                List<RangeEntry> xRanges, List<RangeEntry> yRanges, List<RangeEntry> zRanges,
                                LegacyLoop loop, boolean biomesExcluded, boolean worldsExcluded,
                                boolean dimensionsExcluded, boolean effectsExcluded, boolean weatherExcluded,
@@ -20,10 +20,10 @@ public record LegacyConditions(List<Identifier> biomes, List<Identifier> worlds,
     public static final LegacyConditions DEFAULT = new LegacyConditions(ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), LegacyLoop.DEFAULT);
 
     public static final Codec<LegacyConditions> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            Identifier.CODEC.listOf().optionalFieldOf("biomes", ImmutableList.of()).forGetter(LegacyConditions::biomes),
-            Identifier.CODEC.listOf().optionalFieldOf("worlds", ImmutableList.of()).forGetter(LegacyConditions::worlds),
-            Identifier.CODEC.listOf().optionalFieldOf("dimensions", ImmutableList.of()).forGetter(LegacyConditions::dimensions),
-            Identifier.CODEC.listOf().optionalFieldOf("effects", ImmutableList.of()).forGetter(LegacyConditions::effects),
+            ResourceLocation.CODEC.listOf().optionalFieldOf("biomes", ImmutableList.of()).forGetter(LegacyConditions::biomes),
+            ResourceLocation.CODEC.listOf().optionalFieldOf("worlds", ImmutableList.of()).forGetter(LegacyConditions::worlds),
+            ResourceLocation.CODEC.listOf().optionalFieldOf("dimensions", ImmutableList.of()).forGetter(LegacyConditions::dimensions),
+            ResourceLocation.CODEC.listOf().optionalFieldOf("effects", ImmutableList.of()).forGetter(LegacyConditions::effects),
             LegacyWeather.CODEC.listOf().optionalFieldOf("weather", ImmutableList.of()).forGetter(LegacyConditions::weathers),
             RangeEntry.CODEC.listOf().optionalFieldOf("xRanges", ImmutableList.of()).forGetter(LegacyConditions::xRanges),
             RangeEntry.CODEC.listOf().optionalFieldOf("yRanges", ImmutableList.of()).forGetter(LegacyConditions::yRanges),
@@ -31,8 +31,8 @@ public record LegacyConditions(List<Identifier> biomes, List<Identifier> worlds,
             LegacyLoop.CODEC.optionalFieldOf("loop", LegacyLoop.DEFAULT).forGetter(LegacyConditions::loop)
     ).apply(instance, LegacyConditions::new));
 
-    public LegacyConditions(List<Identifier> biomes, List<Identifier> worlds, List<Identifier> dimensions,
-                            List<Identifier> effects, List<LegacyWeather> weathers,
+    public LegacyConditions(List<ResourceLocation> biomes, List<ResourceLocation> worlds, List<ResourceLocation> dimensions,
+                            List<ResourceLocation> effects, List<LegacyWeather> weathers,
                             List<RangeEntry> xRanges, List<RangeEntry> yRanges, List<RangeEntry> zRanges,
                             LegacyLoop loop) {
         this(biomes, worlds, dimensions, effects, weathers, xRanges, yRanges, zRanges, loop, false, false, false, false, false, false, false, false);

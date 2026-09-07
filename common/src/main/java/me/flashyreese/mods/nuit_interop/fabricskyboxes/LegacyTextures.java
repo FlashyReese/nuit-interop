@@ -5,7 +5,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import me.flashyreese.mods.nuit.components.Texture;
 import me.flashyreese.mods.nuit.components.UVRange;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.List;
 
@@ -42,7 +42,7 @@ public class LegacyTextures {
         this.textureList.add(west);
     }
 
-    public LegacyTextures(Identifier north, Identifier south, Identifier east, Identifier west, Identifier top, Identifier bottom) {
+    public LegacyTextures(ResourceLocation north, ResourceLocation south, ResourceLocation east, ResourceLocation west, ResourceLocation top, ResourceLocation bottom) {
         this(new Texture(north), new Texture(south), new Texture(east), new Texture(west), new Texture(top), new Texture(bottom));
     }
 

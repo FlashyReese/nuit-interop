@@ -7,7 +7,7 @@ import me.flashyreese.mods.nuit.components.Texture;
 import me.flashyreese.mods.nuit.components.UVRange;
 import me.flashyreese.mods.nuit.util.CodecUtils;
 import net.minecraft.client.Minecraft;
-import net.minecraft.util.Util;
+import net.minecraft.Util;
 
 import java.util.Map;
 

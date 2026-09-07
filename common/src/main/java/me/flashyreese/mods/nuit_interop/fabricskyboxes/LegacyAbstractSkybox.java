@@ -1,49 +1,34 @@
 package me.flashyreese.mods.nuit_interop.fabricskyboxes;
 
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
-import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.VertexBuffer;
 import me.flashyreese.mods.nuit.api.skyboxes.NuitSkybox;
-import me.flashyreese.mods.nuit.api.skyboxes.SkyboxRenderContext;
-import me.flashyreese.mods.nuit.api.skyboxes.SkyboxTextureProvider;
 import me.flashyreese.mods.nuit.components.Conditions;
 import me.flashyreese.mods.nuit.components.Properties;
+import me.flashyreese.mods.nuit.mixin.SkyRendererAccessor;
 import me.flashyreese.mods.nuit.render.NuitRenderBackend;
+import me.flashyreese.mods.nuit.skybox.TextureRegistrar;
 import me.flashyreese.mods.nuit_interop.config.NuitInteropConfig;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.renderer.FogRenderer;
+import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
-import net.minecraft.world.attribute.EnvironmentAttributes;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.level.MoonPhase;
 import net.minecraft.world.level.biome.Biome;
-import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.level.material.FogType;
 import org.joml.Matrix4f;
-import org.joml.Matrix4fStack;
-import org.lwjgl.opengl.GL46C;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public abstract class LegacyAbstractSkybox implements NuitSkybox, SkyboxTextureProvider {
-    private static final Identifier DEFAULT_MOON_ATLAS = Identifier.withDefaultNamespace("textures/environment/celestial/moon_phases.png");
-    private static final Identifier[] DEFAULT_MOON_PHASES = new Identifier[]{
-            Identifier.withDefaultNamespace("textures/environment/celestial/moon/full_moon.png"),
-            Identifier.withDefaultNamespace("textures/environment/celestial/moon/waning_gibbous.png"),
-            Identifier.withDefaultNamespace("textures/environment/celestial/moon/third_quarter.png"),
-            Identifier.withDefaultNamespace("textures/environment/celestial/moon/waning_crescent.png"),
-            Identifier.withDefaultNamespace("textures/environment/celestial/moon/new_moon.png"),
-            Identifier.withDefaultNamespace("textures/environment/celestial/moon/waxing_crescent.png"),
-            Identifier.withDefaultNamespace("textures/environment/celestial/moon/first_quarter.png"),
-            Identifier.withDefaultNamespace("textures/environment/celestial/moon/waxing_gibbous.png")
-    };
-
+public abstract class LegacyAbstractSkybox implements NuitSkybox, TextureRegistrar {
     protected final LegacyProperties legacyProperties;
     protected final LegacyConditions legacyConditions;
     protected final LegacyDecorations decorations;
@@ -102,7 +87,8 @@ public abstract class LegacyAbstractSkybox implements NuitSkybox, SkyboxTextureP
             return true;
         }
 
-        boolean contains = this.legacyConditions.biomes().contains(client.level.registryAccess().lookupOrThrow(Registries.BIOME).getKey(client.level.getBiome(client.player.blockPosition()).value()));
+        ResourceLocation biome = client.level.getBiome(client.player.blockPosition()).unwrapKey().orElseThrow().location();
+        boolean contains = this.legacyConditions.biomes().contains(biome);
         return this.legacyConditions.biomesExcluded() ^ contains;
     }
 
@@ -113,28 +99,21 @@ public abstract class LegacyAbstractSkybox implements NuitSkybox, SkyboxTextureP
             return true;
         }
 
-        return this.legacyConditions.dimensionsExcluded() ^ this.legacyConditions.dimensions().contains(client.level.dimension().identifier());
+        return this.legacyConditions.dimensionsExcluded() ^ this.legacyConditions.dimensions().contains(client.level.dimension().location());
     }
 
     protected boolean checkWorlds() {
         Minecraft client = Minecraft.getInstance();
         Objects.requireNonNull(client.level);
-        Identifier currentVanillaWorld = getVanillaWorldId(client.level.dimensionType().skybox());
+        ResourceLocation currentVanillaWorld = me.flashyreese.mods.nuit.util.Utils.getVanillaSkyboxId(client.level.effects().skyType());
         if (this.legacyConditions.worlds().isEmpty()) {
             return true;
         }
 
         boolean contains = this.legacyConditions.worlds().contains(currentVanillaWorld)
-                || this.legacyConditions.worlds().contains(client.level.dimension().identifier());
+                || this.legacyConditions.worlds().contains(client.level.dimension().location())
+                || this.legacyConditions.worlds().contains(client.level.dimensionType().effectsLocation());
         return this.legacyConditions.worldsExcluded() ^ contains;
-    }
-
-    private static Identifier getVanillaWorldId(DimensionType.Skybox skybox) {
-        return switch (skybox) {
-            case NONE -> Identifier.withDefaultNamespace("none");
-            case OVERWORLD -> Identifier.withDefaultNamespace("overworld");
-            case END -> Identifier.withDefaultNamespace("end");
-        };
     }
 
     protected boolean checkEffects() {
@@ -153,12 +132,15 @@ public abstract class LegacyAbstractSkybox implements NuitSkybox, SkyboxTextureP
                 return false;
             }
 
-            return !(camera.entity() instanceof LivingEntity livingEntity) || (!livingEntity.hasEffect(MobEffects.BLINDNESS) && !livingEntity.hasEffect(MobEffects.DARKNESS));
+            return !(camera.getEntity() instanceof LivingEntity livingEntity) || (!livingEntity.hasEffect(MobEffects.BLINDNESS) && !livingEntity.hasEffect(MobEffects.DARKNESS));
         }
 
-        if (camera.entity() instanceof LivingEntity livingEntity) {
-            boolean noneMatch = this.legacyConditions.effects().stream().noneMatch(identifier -> client.level.registryAccess().lookupOrThrow(Registries.MOB_EFFECT).get(identifier).isPresent()
-                    && livingEntity.hasEffect(client.level.registryAccess().lookupOrThrow(Registries.MOB_EFFECT).wrapAsHolder(client.level.registryAccess().lookupOrThrow(Registries.MOB_EFFECT).get(identifier).get().value())));
+        if (camera.getEntity() instanceof LivingEntity livingEntity) {
+            boolean noneMatch = this.legacyConditions.effects().stream().noneMatch(resourceLocation -> {
+                var registry = client.level.registryAccess().registryOrThrow(Registries.MOB_EFFECT);
+                var effect = registry.get(resourceLocation);
+                return effect != null && livingEntity.hasEffect(registry.wrapAsHolder(effect));
+            });
             return this.legacyConditions.effectsExcluded() ^ noneMatch;
         }
         return true;
@@ -194,7 +176,7 @@ public abstract class LegacyAbstractSkybox implements NuitSkybox, SkyboxTextureP
     protected boolean checkWeather() {
         ClientLevel world = Objects.requireNonNull(Minecraft.getInstance().level);
         LocalPlayer player = Objects.requireNonNull(Minecraft.getInstance().player);
-        Biome.Precipitation precipitation = world.getBiome(player.blockPosition()).value().getPrecipitationAt(player.blockPosition(), world.getSeaLevel());
+        Biome.Precipitation precipitation = world.getBiome(player.blockPosition()).value().getPrecipitationAt(player.blockPosition());
         if (this.legacyConditions.weathers().isEmpty()) {
             return true;
         }
@@ -218,70 +200,74 @@ public abstract class LegacyAbstractSkybox implements NuitSkybox, SkyboxTextureP
         return this.legacyConditions.weatherExcluded() ^ matches;
     }
 
-    protected void renderDecorations(SkyboxRenderContext context, Matrix4fStack matrix4fStack) {
+    protected void renderDecorations(SkyRendererAccessor skyRendererAccessor, Matrix4f modelViewMatrix,
+                                     Matrix4f projectionMatrix, float tickDelta, Camera camera,
+                                     Runnable fogCallback) {
         if (!this.decorations.sunEnabled() && !this.decorations.moonEnabled() && !this.decorations.starsEnabled()) {
             return;
         }
 
-        Camera camera = context.camera();
-        float tickDelta = context.tickDelta();
-        ClientLevel level = Objects.requireNonNull((ClientLevel) camera.entity().level());
-        matrix4fStack.pushMatrix();
+        ClientLevel level = Objects.requireNonNull((ClientLevel) camera.getEntity().level());
+        Matrix4f decorationMatrix = this.decorations.rotation().apply(new Matrix4f(modelViewMatrix), level);
         try {
-            this.decorations.rotation().apply(matrix4fStack, level);
-            GpuBufferSlice dynamicTransforms = NuitRenderBackend.createDynamicTransforms(new Matrix4f(matrix4fStack), this.decorations.blend().getColorModifier(this.alpha));
+            NuitRenderBackend.beginSkybox(this.decorations.blend(), this.alpha, GameRenderer::getPositionTexShader);
 
             if (this.decorations.sunEnabled()) {
-                LegacyFsbRenderer.drawCelestialQuad(LegacyFsbRenderer.celestialPipeline(), dynamicTransforms, this.decorations.sunTexture(), 30.0F, 100.0F, new me.flashyreese.mods.nuit.components.UVRange(0.0F, 0.0F, 1.0F, 1.0F));
+                LegacyFsbRenderer.drawCelestialQuad(decorationMatrix, this.decorations.sunTexture(), 30.0F, 100.0F, new me.flashyreese.mods.nuit.components.UVRange(0.0F, 0.0F, 1.0F, 1.0F));
             }
 
             if (this.decorations.moonEnabled()) {
-                this.renderMoon(camera.attributeProbe().getValue(EnvironmentAttributes.MOON_PHASE, tickDelta), dynamicTransforms);
+                this.renderMoon(level.getMoonPhase(), decorationMatrix);
             }
 
             if (this.decorations.starsEnabled()) {
-                PoseStack poseStack = new PoseStack();
-                this.decorations.rotation().apply(poseStack, level);
-                context.renderStars(camera.attributeProbe().getValue(EnvironmentAttributes.STAR_BRIGHTNESS, tickDelta), poseStack);
+                this.renderStars(skyRendererAccessor, level, decorationMatrix, projectionMatrix, tickDelta, fogCallback);
             }
         } finally {
-            matrix4fStack.popMatrix();
-            GL46C.glBlendEquation(GL46C.GL_FUNC_ADD);
+            NuitRenderBackend.endSkybox();
         }
     }
 
-    private void renderMoon(MoonPhase moonPhase, GpuBufferSlice dynamicTransforms) {
-        Identifier moonTexture = this.decorations.moonTexture();
-        boolean useDefaultMoonPhases = usesDefaultMoonPhases(moonTexture);
-        Identifier texture = useDefaultMoonPhases ? DEFAULT_MOON_PHASES[moonPhase.index()] : moonTexture;
-        float startX = 0.0F;
-        float startY = 0.0F;
-        float endX = 1.0F;
-        float endY = 1.0F;
+    private void renderMoon(int moonPhase, Matrix4f modelViewMatrix) {
+        ResourceLocation moonTexture = this.decorations.moonTexture();
+        int xCoord = moonPhase % 4;
+        int yCoord = moonPhase / 4 % 2;
+        float startX = xCoord / 4.0F;
+        float startY = yCoord / 2.0F;
+        float endX = (xCoord + 1) / 4.0F;
+        float endY = (yCoord + 1) / 2.0F;
+        LegacyFsbRenderer.drawCelestialQuad(modelViewMatrix, moonTexture, 20.0F, -100.0F, new me.flashyreese.mods.nuit.components.UVRange(endX, endY, startX, startY));
+    }
 
-        if (!useDefaultMoonPhases) {
-            int xCoord = moonPhase.index() % 4;
-            int yCoord = moonPhase.index() / 4 % 2;
-            startX = xCoord / 4.0F;
-            startY = yCoord / 2.0F;
-            endX = (xCoord + 1) / 4.0F;
-            endY = (yCoord + 1) / 2.0F;
+    private void renderStars(SkyRendererAccessor skyRendererAccessor, ClientLevel level, Matrix4f modelViewMatrix,
+                             Matrix4f projectionMatrix, float tickDelta, Runnable fogCallback) {
+        float brightness = level.getStarBrightness(tickDelta) * this.alpha;
+        if (brightness <= 0.0F) {
+            return;
         }
 
-        LegacyFsbRenderer.drawCelestialQuad(LegacyFsbRenderer.celestialPipeline(), dynamicTransforms, texture, 20.0F, -100.0F, new me.flashyreese.mods.nuit.components.UVRange(endX, endY, startX, startY));
+        RenderSystem.setShader(GameRenderer::getPositionShader);
+        RenderSystem.setShaderColor(brightness, brightness, brightness, brightness);
+        FogRenderer.setupNoFog();
+        try {
+            skyRendererAccessor.getStarsBuffer().bind();
+            skyRendererAccessor.getStarsBuffer().drawWithShader(modelViewMatrix, projectionMatrix, RenderSystem.getShader());
+        } finally {
+            try {
+                VertexBuffer.unbind();
+            } finally {
+                fogCallback.run();
+            }
+        }
     }
 
-    protected static boolean usesDefaultMoonPhases(Identifier moonTexture) {
-        return moonTexture.equals(DEFAULT_MOON_ATLAS) || moonTexture.equals(LegacyDecorations.MOON_PHASES);
-    }
-
-    protected static List<Identifier> getMoonTexturesToRegister(Identifier moonTexture) {
-        return usesDefaultMoonPhases(moonTexture) ? List.of(DEFAULT_MOON_PHASES) : List.of(moonTexture);
+    protected static List<ResourceLocation> getMoonTexturesToRegister(ResourceLocation moonTexture) {
+        return List.of(moonTexture);
     }
 
     @Override
-    public List<Identifier> getTexturesToRegister() {
-        List<Identifier> textures = new ArrayList<>();
+    public List<ResourceLocation> getTexturesToRegister() {
+        List<ResourceLocation> textures = new ArrayList<>();
         if (this.decorations.sunEnabled()) {
             textures.add(this.decorations.sunTexture());
         }

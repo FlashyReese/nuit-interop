@@ -1,8 +1,8 @@
 package me.flashyreese.mods.nuit_interop.optifine;
 
 import me.flashyreese.mods.nuit.components.RangeEntry;
-import net.minecraft.IdentifierException;
-import net.minecraft.resources.Identifier;
+import net.minecraft.ResourceLocationException;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -74,16 +74,16 @@ final class OptiFineSkyPropertyParser {
         return axis;
     }
 
-    static Identifier parseBiomeId(String biomeName) {
+    static ResourceLocation parseBiomeId(String biomeName) {
         String normalized = biomeName.toLowerCase(Locale.ROOT);
-        Identifier explicitId = Identifier.tryParse(normalized);
+        ResourceLocation explicitId = ResourceLocation.tryParse(normalized);
         if (explicitId != null && normalized.contains(":")) {
             return explicitId;
         }
 
         try {
-            return Identifier.tryBuild("minecraft", normalized);
-        } catch (IdentifierException e) {
+            return ResourceLocation.tryBuild("minecraft", normalized);
+        } catch (ResourceLocationException e) {
             return null;
         }
     }

@@ -1,19 +1,17 @@
 package me.flashyreese.mods.nuit_interop.fabricskyboxes;
 
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
-import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.ByteBufferBuilder;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.Tesselator;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import me.flashyreese.mods.nuit.api.skyboxes.SkyboxRenderContext;
 import me.flashyreese.mods.nuit.components.Blend;
 import me.flashyreese.mods.nuit.components.Texture;
 import me.flashyreese.mods.nuit.components.UVRange;
 import me.flashyreese.mods.nuit.util.Utils;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import org.joml.Matrix4f;
-import org.joml.Matrix4fStack;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,34 +36,33 @@ public class LegacyMultiTextureSkybox extends LegacyTexturedSkybox {
     }
 
     @Override
-    protected void renderTexturedSkybox(SkyboxRenderContext context, Matrix4fStack matrix4fStack, RenderPipeline pipeline, GpuBufferSlice dynamicTransforms) {
+    protected void renderTexturedSkybox(Matrix4f modelViewMatrix) {
         for (LegacyAnimation animation : this.animations) {
             animation.tick();
         }
 
         for (int face = 0; face < 6; ++face) {
-            Matrix4f matrix4f = Utils.getMatrixForRotatedFace(face);
+            Matrix4f faceMatrix = LegacyFsbRenderer.getMatrixForRotatedFace(face);
             UVRange faceUVRange = LegacyUVRanges.SINGLE_SPRITE.byId(face);
             for (LegacyAnimation animation : this.animations) {
                 UVRange intersect = Utils.findUVIntersection(faceUVRange, animation.uvRange());
                 if (intersect != null && animation.currentFrame() != null) {
                     UVRange intersectionOnCurrentTexture = Utils.mapUVRanges(faceUVRange, this.quad, intersect);
                     UVRange intersectionOnCurrentFrame = Utils.mapUVRanges(animation.uvRange(), animation.currentFrame(), intersect);
-                    this.drawPartial(pipeline, dynamicTransforms, matrix4f, animation.texture(), intersectionOnCurrentTexture, intersectionOnCurrentFrame);
+                    this.drawPartial(modelViewMatrix, faceMatrix, animation.texture(), intersectionOnCurrentTexture, intersectionOnCurrentFrame);
                 }
             }
         }
     }
 
-    private void drawPartial(RenderPipeline pipeline, GpuBufferSlice dynamicTransforms, Matrix4f matrix4f, Texture texture, UVRange position, UVRange uv) {
-        try (ByteBufferBuilder byteBufferBuilder = new ByteBufferBuilder(pipeline.getVertexFormat().getVertexSize() * 4)) {
-            BufferBuilder builder = new BufferBuilder(byteBufferBuilder, pipeline.getVertexFormatMode(), pipeline.getVertexFormat());
-            builder.addVertex(matrix4f, position.minU(), -this.quadSize, position.minV()).setUv(uv.minU(), uv.minV());
-            builder.addVertex(matrix4f, position.minU(), -this.quadSize, position.maxV()).setUv(uv.minU(), uv.maxV());
-            builder.addVertex(matrix4f, position.maxU(), -this.quadSize, position.maxV()).setUv(uv.maxU(), uv.maxV());
-            builder.addVertex(matrix4f, position.maxU(), -this.quadSize, position.minV()).setUv(uv.maxU(), uv.minV());
-            LegacyFsbRenderer.drawTexturedMesh(pipeline, builder.buildOrThrow(), dynamicTransforms, texture.getTextureId());
-        }
+    private void drawPartial(Matrix4f modelViewMatrix, Matrix4f faceMatrix, Texture texture, UVRange position, UVRange uv) {
+        Matrix4f matrix = new Matrix4f(modelViewMatrix).mul(faceMatrix);
+        BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
+        builder.addVertex(matrix, position.minU(), -this.quadSize, position.minV()).setUv(uv.minU(), uv.minV());
+        builder.addVertex(matrix, position.minU(), -this.quadSize, position.maxV()).setUv(uv.minU(), uv.maxV());
+        builder.addVertex(matrix, position.maxU(), -this.quadSize, position.maxV()).setUv(uv.maxU(), uv.maxV());
+        builder.addVertex(matrix, position.maxU(), -this.quadSize, position.minV()).setUv(uv.maxU(), uv.minV());
+        LegacyFsbRenderer.drawTexturedMesh(builder.buildOrThrow(), texture.getTextureId());
     }
 
     public List<LegacyAnimation> getAnimations() {
@@ -73,7 +70,7 @@ public class LegacyMultiTextureSkybox extends LegacyTexturedSkybox {
     }
 
     @Override
-    public List<Identifier> getTexturesToRegister() {
+    public List<ResourceLocation> getTexturesToRegister() {
         return Stream.concat(super.getTexturesToRegister().stream(), this.animations.stream().map(LegacyAnimation::texture).map(Texture::getTextureId))
                 .distinct()
                 .toList();

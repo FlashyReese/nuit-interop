@@ -1,18 +1,19 @@
 package me.flashyreese.mods.nuit_interop.fabricskyboxes;
 
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
-import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.ByteBufferBuilder;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.Tesselator;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import me.flashyreese.mods.nuit.api.skyboxes.SkyboxRenderContext;
 import me.flashyreese.mods.nuit.components.Blend;
 import me.flashyreese.mods.nuit.components.RGBA;
+import me.flashyreese.mods.nuit.mixin.SkyRendererAccessor;
 import me.flashyreese.mods.nuit.render.NuitRenderBackend;
-import me.flashyreese.mods.nuit.util.Utils;
+import net.minecraft.client.Camera;
+import net.minecraft.client.renderer.GameRenderer;
 import org.joml.Matrix4f;
-import org.lwjgl.opengl.GL46C;
 
 public class LegacyMonoColorSkybox extends LegacyAbstractSkybox {
     public static final Codec<LegacyMonoColorSkybox> CODEC = RecordCodecBuilder.create(instance -> instance.group(
@@ -33,28 +34,29 @@ public class LegacyMonoColorSkybox extends LegacyAbstractSkybox {
     }
 
     @Override
-    public void render(SkyboxRenderContext context) {
-        context.applyFog();
+    public void render(SkyRendererAccessor skyRendererAccessor, PoseStack poseStack, Matrix4f projectionMatrix,
+                       float tickDelta, Camera camera, boolean thickFog, Runnable fogCallback) {
+        fogCallback.run();
         if (this.alpha <= 0.0F) {
             return;
         }
 
-        RenderPipeline pipeline = LegacyFsbRenderer.monoPipeline(this.blend.getBlendFunction());
-        GpuBufferSlice dynamicTransforms = NuitRenderBackend.createDynamicTransforms(new Matrix4f(context.skyModelViewStack()), this.blend.getColorModifier(this.alpha));
-        try (ByteBufferBuilder byteBufferBuilder = new ByteBufferBuilder(pipeline.getVertexFormat().getVertexSize() * 24)) {
-            BufferBuilder builder = new BufferBuilder(byteBufferBuilder, pipeline.getVertexFormatMode(), pipeline.getVertexFormat());
+        Matrix4f modelViewMatrix = new Matrix4f(poseStack.last().pose());
+        try {
+            NuitRenderBackend.beginSkybox(this.blend, this.alpha, GameRenderer::getPositionColorShader);
+            BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
             for (int face = 0; face < 6; ++face) {
-                Matrix4f matrix4f = Utils.getMatrixForRotatedFace(face);
-                builder.addVertex(matrix4f, -100.0F, -100.0F, -100.0F).setColor(this.color.getRed(), this.color.getGreen(), this.color.getBlue(), this.color.getAlpha());
-                builder.addVertex(matrix4f, -100.0F, -100.0F, 100.0F).setColor(this.color.getRed(), this.color.getGreen(), this.color.getBlue(), this.color.getAlpha());
-                builder.addVertex(matrix4f, 100.0F, -100.0F, 100.0F).setColor(this.color.getRed(), this.color.getGreen(), this.color.getBlue(), this.color.getAlpha());
-                builder.addVertex(matrix4f, 100.0F, -100.0F, -100.0F).setColor(this.color.getRed(), this.color.getGreen(), this.color.getBlue(), this.color.getAlpha());
+                Matrix4f matrix = new Matrix4f(modelViewMatrix).mul(LegacyFsbRenderer.getMatrixForRotatedFace(face));
+                builder.addVertex(matrix, -100.0F, -100.0F, -100.0F).setColor(this.color.getRed(), this.color.getGreen(), this.color.getBlue(), this.color.getAlpha());
+                builder.addVertex(matrix, -100.0F, -100.0F, 100.0F).setColor(this.color.getRed(), this.color.getGreen(), this.color.getBlue(), this.color.getAlpha());
+                builder.addVertex(matrix, 100.0F, -100.0F, 100.0F).setColor(this.color.getRed(), this.color.getGreen(), this.color.getBlue(), this.color.getAlpha());
+                builder.addVertex(matrix, 100.0F, -100.0F, -100.0F).setColor(this.color.getRed(), this.color.getGreen(), this.color.getBlue(), this.color.getAlpha());
             }
-            NuitRenderBackend.draw(pipeline, builder.buildOrThrow(), dynamicTransforms);
+            NuitRenderBackend.draw(builder.buildOrThrow(), GameRenderer::getPositionColorShader);
         } finally {
-            this.renderDecorations(context, context.skyModelViewStack());
-            GL46C.glBlendEquation(GL46C.GL_FUNC_ADD);
+            NuitRenderBackend.endSkybox();
         }
+        this.renderDecorations(skyRendererAccessor, modelViewMatrix, projectionMatrix, tickDelta, camera, fogCallback);
     }
 
     public RGBA getColor() {

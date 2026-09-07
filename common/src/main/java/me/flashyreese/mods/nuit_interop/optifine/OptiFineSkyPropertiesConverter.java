@@ -4,7 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import me.flashyreese.mods.nuit.components.RangeEntry;
 import me.flashyreese.mods.nuit_interop.utils.ResourceManagerHelper;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.List;
 import java.util.Properties;
@@ -13,8 +13,8 @@ import java.util.Set;
 public final class OptiFineSkyPropertiesConverter {
     private static final Set<String> SUPPORTED_WEATHER = Set.of("clear", "rain", "thunder");
 
-    public static JsonObject convert(ResourceManagerHelper resourceManager, Properties properties, Identifier propertiesId) {
-        Identifier sourceTexture = OptiFineSkyTextureResolver.resolve(properties.getProperty("source"), resourceManager, propertiesId);
+    public static JsonObject convert(ResourceManagerHelper resourceManager, Properties properties, ResourceLocation propertiesId) {
+        ResourceLocation sourceTexture = OptiFineSkyTextureResolver.resolve(properties.getProperty("source"), resourceManager, propertiesId);
         if (sourceTexture == null) {
             return null;
         }
@@ -153,7 +153,7 @@ public final class OptiFineSkyPropertiesConverter {
 
         JsonArray biomes = new JsonArray();
         for (String biomeName : OptiFineSkyPropertyParser.tokens(rawBiomes, " ")) {
-            Identifier biomeId = OptiFineSkyPropertyParser.parseBiomeId(biomeName);
+            ResourceLocation biomeId = OptiFineSkyPropertyParser.parseBiomeId(biomeName);
             if (biomeId != null) {
                 biomes.add(biomeId.toString());
             }

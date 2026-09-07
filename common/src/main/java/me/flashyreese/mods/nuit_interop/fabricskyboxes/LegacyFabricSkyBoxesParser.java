@@ -13,7 +13,7 @@ import me.flashyreese.mods.nuit.components.RangeEntry;
 import me.flashyreese.mods.nuit.components.RGBA;
 import me.flashyreese.mods.nuit.components.Texture;
 import me.flashyreese.mods.nuit.components.UVRange;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.joml.Vector3i;
@@ -38,7 +38,7 @@ public final class LegacyFabricSkyBoxesParser {
             "multi-texture", LegacyMultiTextureSkybox.CODEC
     );
 
-    public static Optional<Skybox> parse(Identifier sourceId, JsonObject jsonObject) {
+    public static Optional<Skybox> parse(ResourceLocation sourceId, JsonObject jsonObject) {
         String type = normalizeType(getString(jsonObject, "type", null));
         if (type == null) {
             return Optional.empty();
@@ -79,7 +79,7 @@ public final class LegacyFabricSkyBoxesParser {
                     conditions,
                     LegacyDecorations.DEFAULT,
                     blend,
-                    new Texture(readIdentifier(jsonObject, "texture"))
+                    new Texture(readResourceLocation(jsonObject, "texture"))
             ));
             case "multi-textured", "multi-texture" -> Optional.of(new LegacyMultiTextureSkybox(
                     properties,
@@ -117,14 +117,14 @@ public final class LegacyFabricSkyBoxesParser {
                     readFlatProperties(jsonObject),
                     readFlatConditions(jsonObject),
                     LegacyDecorations.DEFAULT,
-                    new Blend(getBoolean(jsonObject, "shouldBlend", false) ? "add" : ""),
+                    new Blend(getBoolean(jsonObject, "shouldBlend", false) ? "add" : "", me.flashyreese.mods.nuit.components.Blender.normal()),
                     new LegacyTextures(
-                            new Texture(readIdentifier(jsonObject, "texture_north")),
-                            new Texture(readIdentifier(jsonObject, "texture_south")),
-                            new Texture(readIdentifier(jsonObject, "texture_east")),
-                            new Texture(readIdentifier(jsonObject, "texture_west")),
-                            new Texture(readIdentifier(jsonObject, "texture_top")),
-                            new Texture(readIdentifier(jsonObject, "texture_bottom"))
+                            new Texture(readResourceLocation(jsonObject, "texture_north")),
+                            new Texture(readResourceLocation(jsonObject, "texture_south")),
+                            new Texture(readResourceLocation(jsonObject, "texture_east")),
+                            new Texture(readResourceLocation(jsonObject, "texture_west")),
+                            new Texture(readResourceLocation(jsonObject, "texture_top")),
+                            new Texture(readResourceLocation(jsonObject, "texture_bottom"))
                     )
             ));
             default -> Optional.empty();
@@ -153,8 +153,8 @@ public final class LegacyFabricSkyBoxesParser {
     }
 
     private static LegacyConditions readFlatConditions(JsonObject jsonObject) {
-        List<Identifier> biomes = readIdentifiers(jsonObject.get("biomes"));
-        List<Identifier> worlds = readIdentifiers(jsonObject.get("dimensions"));
+        List<ResourceLocation> biomes = readResourceLocations(jsonObject.get("biomes"));
+        List<ResourceLocation> worlds = readResourceLocations(jsonObject.get("dimensions"));
         List<LegacyWeather> weathers = readWeather(jsonObject.get("weather"));
         List<RangeEntry> yRanges = readRanges(jsonObject.get("heightRanges"));
         return new LegacyConditions(biomes, worlds, List.of(), List.of(), weathers, List.of(), yRanges, List.of(), LegacyLoop.DEFAULT);
@@ -263,10 +263,10 @@ public final class LegacyFabricSkyBoxesParser {
             return LegacyConditions.DEFAULT;
         }
 
-        ConditionData<Identifier> biomes = readIdentifierCondition(conditions, "biomes");
-        ConditionData<Identifier> worlds = readIdentifierCondition(conditions, "worlds");
-        ConditionData<Identifier> dimensions = readIdentifierCondition(conditions, "dimensions");
-        ConditionData<Identifier> effects = readIdentifierCondition(conditions, "effects");
+        ConditionData<ResourceLocation> biomes = readResourceLocationCondition(conditions, "biomes");
+        ConditionData<ResourceLocation> worlds = readResourceLocationCondition(conditions, "worlds");
+        ConditionData<ResourceLocation> dimensions = readResourceLocationCondition(conditions, "dimensions");
+        ConditionData<ResourceLocation> effects = readResourceLocationCondition(conditions, "effects");
         ConditionData<LegacyWeather> weather = readWeatherCondition(conditions, "weather");
         ConditionData<RangeEntry> xRanges = readRangeCondition(conditions, "xRanges");
         ConditionData<RangeEntry> yRanges = readRangeCondition(conditions, "yRanges");
@@ -304,8 +304,8 @@ public final class LegacyFabricSkyBoxesParser {
 
     private static LegacyDecorations readV1Decorations(JsonObject jsonObject, LegacyRotation rotation, Blend blend) {
         return new LegacyDecorations(
-                readIdentifier(jsonObject, "sun", LegacyDecorations.SUN),
-                readIdentifier(jsonObject, "moon", LegacyDecorations.MOON_PHASES),
+                readResourceLocation(jsonObject, "sun", LegacyDecorations.SUN),
+                readResourceLocation(jsonObject, "moon", LegacyDecorations.MOON_PHASES),
                 getBoolean(jsonObject, "showSun", false),
                 getBoolean(jsonObject, "showMoon", false),
                 getBoolean(jsonObject, "showStars", false),
@@ -327,7 +327,7 @@ public final class LegacyFabricSkyBoxesParser {
 
             JsonObject animation = entry.getAsJsonObject();
             animations.add(new LegacyAnimation(
-                    new Texture(readIdentifier(animation, "texture")),
+                    new Texture(readResourceLocation(animation, "texture")),
                     readUvRange(animation.get("uvRange")),
                     getInt(animation, "gridColumns", 1),
                     getInt(animation, "gridRows", 1),
@@ -364,28 +364,28 @@ public final class LegacyFabricSkyBoxesParser {
         return separator >= 0 ? normalized.substring(separator + 1) : normalized;
     }
 
-    private static Identifier readIdentifier(JsonObject jsonObject, String name) {
-        return readIdentifier(jsonObject, name, Identifier.withDefaultNamespace("missingno"));
+    private static ResourceLocation readResourceLocation(JsonObject jsonObject, String name) {
+        return readResourceLocation(jsonObject, name, ResourceLocation.withDefaultNamespace("missingno"));
     }
 
-    private static Identifier readIdentifier(JsonObject jsonObject, String name, Identifier defaultValue) {
-        return Identifier.tryParse(getString(jsonObject, name, defaultValue.toString()));
+    private static ResourceLocation readResourceLocation(JsonObject jsonObject, String name, ResourceLocation defaultValue) {
+        return ResourceLocation.tryParse(getString(jsonObject, name, defaultValue.toString()));
     }
 
-    private static List<Identifier> readIdentifiers(JsonElement element) {
-        List<Identifier> identifiers = new ArrayList<>();
+    private static List<ResourceLocation> readResourceLocations(JsonElement element) {
+        List<ResourceLocation> identifiers = new ArrayList<>();
         if (element == null || element.isJsonNull()) {
             return identifiers;
         }
         if (element.isJsonObject() && element.getAsJsonObject().has("entries")) {
-            return readIdentifiers(element.getAsJsonObject().get("entries"));
+            return readResourceLocations(element.getAsJsonObject().get("entries"));
         }
         if (element.isJsonArray()) {
             for (JsonElement entry : element.getAsJsonArray()) {
-                identifiers.add(Identifier.tryParse(entry.getAsString()));
+                identifiers.add(ResourceLocation.tryParse(entry.getAsString()));
             }
         } else if (element.isJsonPrimitive()) {
-            identifiers.add(Identifier.tryParse(element.getAsString()));
+            identifiers.add(ResourceLocation.tryParse(element.getAsString()));
         }
         return identifiers;
     }
@@ -433,9 +433,9 @@ public final class LegacyFabricSkyBoxesParser {
         return ranges;
     }
 
-    private static ConditionData<Identifier> readIdentifierCondition(JsonObject jsonObject, String name) {
+    private static ConditionData<ResourceLocation> readResourceLocationCondition(JsonObject jsonObject, String name) {
         JsonElement element = jsonObject.get(name);
-        return new ConditionData<>(readIdentifiers(element), readExcludes(element));
+        return new ConditionData<>(readResourceLocations(element), readExcludes(element));
     }
 
     private static ConditionData<LegacyWeather> readWeatherCondition(JsonObject jsonObject, String name) {

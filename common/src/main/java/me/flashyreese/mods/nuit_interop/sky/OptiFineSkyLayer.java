@@ -1,10 +1,10 @@
 package me.flashyreese.mods.nuit_interop.sky;
 
 import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
-import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.ByteBufferBuilder;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.Tesselator;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.math.Axis;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
@@ -18,15 +18,13 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
 import org.joml.Matrix4f;
-import org.joml.Matrix4fStack;
 import org.joml.Vector3f;
-import org.joml.Vector4f;
 
 import java.util.List;
 import java.util.Locale;
@@ -45,10 +43,10 @@ public class OptiFineSkyLayer {
     private static final LegacyFade OPTIFINE_FADE = new LegacyFade(0, 0, 0, 0, true);
 
     public static final Codec<OptiFineSkyLayer> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-            Identifier.CODEC.fieldOf("source").forGetter(OptiFineSkyLayer::getSource),
+            ResourceLocation.CODEC.fieldOf("source").forGetter(OptiFineSkyLayer::getSource),
             Codec.BOOL.optionalFieldOf("biomeInclusion", true).forGetter(OptiFineSkyLayer::isBiomeInclusion),
             Codec.BOOL.optionalFieldOf("biomeCondition", false).forGetter(OptiFineSkyLayer::hasBiomeCondition),
-            Identifier.CODEC.listOf().optionalFieldOf("biomes", ImmutableList.of()).forGetter(OptiFineSkyLayer::getBiomes),
+            ResourceLocation.CODEC.listOf().optionalFieldOf("biomes", ImmutableList.of()).forGetter(OptiFineSkyLayer::getBiomes),
             Codec.BOOL.optionalFieldOf("heightCondition", false).forGetter(OptiFineSkyLayer::hasHeightCondition),
             RangeEntry.CODEC.listOf().optionalFieldOf("heights", ImmutableList.of()).forGetter(OptiFineSkyLayer::getHeights),
             OptiFineBlend.CODEC.optionalFieldOf("blend", OptiFineBlend.ADD).forGetter(OptiFineSkyLayer::getBlend),
@@ -61,10 +59,10 @@ public class OptiFineSkyLayer {
             Weather.CODEC.listOf().optionalFieldOf("weathers", ImmutableList.of(Weather.NO_PRECIPITATION)).forGetter(OptiFineSkyLayer::getWeathers)
     ).apply(instance, OptiFineSkyLayer::new));
 
-    private final Identifier source;
+    private final ResourceLocation source;
     private final boolean biomeInclusion;
     private final boolean biomeCondition;
-    private final List<Identifier> biomes;
+    private final List<ResourceLocation> biomes;
     private final boolean heightCondition;
     private final List<RangeEntry> heights;
     private final OptiFineBlend blend;
@@ -79,7 +77,7 @@ public class OptiFineSkyLayer {
     private long conditionAlphaLastUpdateMs = 0L;
     private Level lastLevel;
 
-    public OptiFineSkyLayer(Identifier source, boolean biomeInclusion, boolean biomeCondition, List<Identifier> biomes, boolean heightCondition, List<RangeEntry> heights, OptiFineBlend blend, LegacyFade fade, boolean rotate, float speed, Vector3f axis, Loop loop, float transition, List<Weather> weathers) {
+    public OptiFineSkyLayer(ResourceLocation source, boolean biomeInclusion, boolean biomeCondition, List<ResourceLocation> biomes, boolean heightCondition, List<RangeEntry> heights, OptiFineBlend blend, LegacyFade fade, boolean rotate, float speed, Vector3f axis, Loop loop, float transition, List<Weather> weathers) {
         this.source = source;
         this.biomeInclusion = biomeInclusion;
         this.biomeCondition = biomeCondition || !biomes.isEmpty();
@@ -103,7 +101,7 @@ public class OptiFineSkyLayer {
         }
     }
 
-    public void render(Level level, Matrix4fStack matrix4fStack, int timeOfDay, float skyAngle, float rainGradient, float thunderGradient) {
+    public void render(Level level, Matrix4f modelViewMatrix, int timeOfDay, float skyAngle, float rainGradient, float thunderGradient) {
         float positionAlpha = this.getPositionAlpha(level);
         float weatherAlpha = this.computeWeatherAlpha(rainGradient, thunderGradient);
         float fadeAlpha = this.computeFadeAlpha(timeOfDay);
@@ -112,63 +110,46 @@ public class OptiFineSkyLayer {
             return;
         }
 
-        Vector4f colorModifier = this.blend.applyEquationAndGetColor(finalAlpha);
-        RenderPipeline pipeline = LegacyFsbRenderer.texturedPipeline(this.blend.getBlendFunction());
-        try (ByteBufferBuilder byteBufferBuilder = new ByteBufferBuilder(pipeline.getVertexFormat().getVertexSize() * 24)) {
-            BufferBuilder builder = new BufferBuilder(byteBufferBuilder, pipeline.getVertexFormatMode(), pipeline.getVertexFormat());
-            GpuBufferSlice dynamicTransforms;
-            matrix4fStack.pushMatrix();
-            try {
-                this.applyLayerRotation(level, matrix4fStack, skyAngle);
-                dynamicTransforms = this.createDynamicTransforms(matrix4fStack, colorModifier);
-                this.buildSkyCube(builder);
-            } finally {
-                matrix4fStack.popMatrix();
-            }
-
-            LegacyFsbRenderer.drawTexturedMesh(pipeline, builder.buildOrThrow(), dynamicTransforms, this.source);
+        this.blend.apply(finalAlpha);
+        try {
+            Matrix4f layerMatrix = new Matrix4f(modelViewMatrix);
+            this.applyLayerRotation(level, layerMatrix, skyAngle);
+            BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
+            this.buildSkyCube(layerMatrix, builder);
+            LegacyFsbRenderer.drawTexturedMesh(builder.buildOrThrow(), this.source);
+        } finally {
+            NuitRenderBackend.endBlend();
         }
     }
 
-    private void applyLayerRotation(Level level, Matrix4fStack matrix4fStack, float skyAngle) {
+    private void applyLayerRotation(Level level, Matrix4f matrix, float skyAngle) {
         if (this.rotate) {
-            matrix4fStack.rotate(Axis.of(this.axis).rotationDegrees(this.computeRotationDegrees(level, skyAngle)));
+            matrix.rotate(Axis.of(this.axis).rotationDegrees(this.computeRotationDegrees(level, skyAngle)));
         }
     }
 
-    private GpuBufferSlice createDynamicTransforms(Matrix4fStack matrix4fStack, Vector4f colorModifier) {
-        return NuitRenderBackend.createDynamicTransforms(new Matrix4f(matrix4fStack), colorModifier);
+    private void buildSkyCube(Matrix4f modelViewMatrix, BufferBuilder builder) {
+        Matrix4f faceMatrix = new Matrix4f(modelViewMatrix)
+                .rotate(Axis.XP.rotationDegrees(90.0F))
+                .rotate(Axis.ZP.rotationDegrees(-90.0F));
+        this.renderSide(faceMatrix, builder, 4);
+        this.renderSide(new Matrix4f(faceMatrix).rotate(Axis.XP.rotationDegrees(90.0F)), builder, 1);
+        this.renderSide(new Matrix4f(faceMatrix).rotate(Axis.XP.rotationDegrees(-90.0F)), builder, 0);
+        faceMatrix.rotate(Axis.ZP.rotationDegrees(90.0F));
+        this.renderSide(faceMatrix, builder, 5);
+        faceMatrix.rotate(Axis.ZP.rotationDegrees(90.0F));
+        this.renderSide(faceMatrix, builder, 2);
+        faceMatrix.rotate(Axis.ZP.rotationDegrees(90.0F));
+        this.renderSide(faceMatrix, builder, 3);
     }
 
-    private void buildSkyCube(BufferBuilder builder) {
-        Matrix4fStack faceStack = new Matrix4fStack(8);
-        faceStack.rotate(Axis.XP.rotationDegrees(90.0F));
-        faceStack.rotate(Axis.ZP.rotationDegrees(-90.0F));
-        this.renderSide(faceStack, builder, 4);
-        faceStack.pushMatrix();
-        faceStack.rotate(Axis.XP.rotationDegrees(90.0F));
-        this.renderSide(faceStack, builder, 1);
-        faceStack.popMatrix();
-        faceStack.pushMatrix();
-        faceStack.rotate(Axis.XP.rotationDegrees(-90.0F));
-        this.renderSide(faceStack, builder, 0);
-        faceStack.popMatrix();
-        faceStack.rotate(Axis.ZP.rotationDegrees(90.0F));
-        this.renderSide(faceStack, builder, 5);
-        faceStack.rotate(Axis.ZP.rotationDegrees(90.0F));
-        this.renderSide(faceStack, builder, 2);
-        faceStack.rotate(Axis.ZP.rotationDegrees(90.0F));
-        this.renderSide(faceStack, builder, 3);
-    }
-
-    private void renderSide(Matrix4fStack matrix4fStack, BufferBuilder builder, int side) {
+    private void renderSide(Matrix4f matrix, BufferBuilder builder, int side) {
         float minU = (float) (side % 3) / 3.0F;
         float minV = (float) (side / 3) / 2.0F;
-        Matrix4f matrix4f = new Matrix4f(matrix4fStack);
-        builder.addVertex(matrix4f, -100.0F, -100.0F, -100.0F).setUv(minU, minV);
-        builder.addVertex(matrix4f, -100.0F, -100.0F, 100.0F).setUv(minU, minV + 0.5F);
-        builder.addVertex(matrix4f, 100.0F, -100.0F, 100.0F).setUv(minU + 0.33333334F, minV + 0.5F);
-        builder.addVertex(matrix4f, 100.0F, -100.0F, -100.0F).setUv(minU + 0.33333334F, minV);
+        builder.addVertex(matrix, -100.0F, -100.0F, -100.0F).setUv(minU, minV);
+        builder.addVertex(matrix, -100.0F, -100.0F, 100.0F).setUv(minU, minV + 0.5F);
+        builder.addVertex(matrix, 100.0F, -100.0F, 100.0F).setUv(minU + 0.33333334F, minV + 0.5F);
+        builder.addVertex(matrix, 100.0F, -100.0F, -100.0F).setUv(minU + 0.33333334F, minV);
     }
 
     private float computeRotationDegrees(Level level, float skyAngle) {
@@ -202,7 +183,7 @@ public class OptiFineSkyLayer {
                 return false;
             }
 
-            boolean matchesBiome = this.biomes.stream().anyMatch(biome -> matchesOptiFineBiome(biome, currentBiomeKey.identifier()));
+            boolean matchesBiome = this.biomes.stream().anyMatch(biome -> matchesOptiFineBiome(biome, currentBiomeKey.location()));
             if (this.biomeInclusion != matchesBiome) {
                 return false;
             }
@@ -215,7 +196,7 @@ public class OptiFineSkyLayer {
         return true;
     }
 
-    private static boolean matchesOptiFineBiome(Identifier expected, Identifier actual) {
+    private static boolean matchesOptiFineBiome(ResourceLocation expected, ResourceLocation actual) {
         if (expected.equals(actual)) {
             return true;
         }
@@ -290,7 +271,7 @@ public class OptiFineSkyLayer {
         return true;
     }
 
-    public Identifier getSource() {
+    public ResourceLocation getSource() {
         return source;
     }
 
@@ -302,7 +283,7 @@ public class OptiFineSkyLayer {
         return biomeCondition;
     }
 
-    public List<Identifier> getBiomes() {
+    public List<ResourceLocation> getBiomes() {
         return biomes;
     }
 
