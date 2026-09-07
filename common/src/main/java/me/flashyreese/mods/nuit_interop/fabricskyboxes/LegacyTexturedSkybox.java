@@ -7,7 +7,6 @@ import me.flashyreese.mods.nuit.components.Blend;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import org.joml.Matrix4f;
-import org.joml.Matrix4fStack;
 
 import java.util.Objects;
 
@@ -29,20 +28,14 @@ public abstract class LegacyTexturedSkybox extends LegacyAbstractSkybox {
         }
 
         ClientLevel level = Objects.requireNonNull(Minecraft.getInstance().level);
-        Matrix4fStack matrix4fStack = context.skyModelViewStack();
-        matrix4fStack.pushMatrix();
-        try {
-            this.rotation.apply(matrix4fStack, level);
-            RenderPipeline pipeline = LegacyFsbRenderer.texturedPipeline(this.blend.getBlendFunction());
-            GpuBufferSlice dynamicTransforms = LegacyFsbRenderer.dynamicTransforms(new Matrix4f(matrix4fStack), this.blend, this.alpha);
-            this.renderTexturedSkybox(context, matrix4fStack, pipeline, dynamicTransforms);
-            this.renderDecorations(context, matrix4fStack);
-        } finally {
-            matrix4fStack.popMatrix();
-        }
+        Matrix4f modelViewMatrix = this.rotation.apply(new Matrix4f(context.skyModelViewStack()), level);
+        RenderPipeline pipeline = LegacyFsbRenderer.texturedPipeline(this.blend.getBlendFunction());
+        GpuBufferSlice dynamicTransforms = LegacyFsbRenderer.dynamicTransforms(modelViewMatrix, this.blend, this.alpha);
+        this.renderTexturedSkybox(context, modelViewMatrix, pipeline, dynamicTransforms);
+        this.renderDecorations(context, modelViewMatrix);
     }
 
-    protected abstract void renderTexturedSkybox(SkyboxRenderContext context, Matrix4fStack matrix4fStack, RenderPipeline pipeline, GpuBufferSlice dynamicTransforms);
+    protected abstract void renderTexturedSkybox(SkyboxRenderContext context, Matrix4f modelViewMatrix, RenderPipeline pipeline, GpuBufferSlice dynamicTransforms);
 
     public Blend getBlend() {
         return this.blend;

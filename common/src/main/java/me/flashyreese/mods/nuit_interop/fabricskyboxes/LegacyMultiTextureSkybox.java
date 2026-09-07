@@ -13,7 +13,6 @@ import me.flashyreese.mods.nuit.components.UVRange;
 import me.flashyreese.mods.nuit.util.Utils;
 import net.minecraft.resources.Identifier;
 import org.joml.Matrix4f;
-import org.joml.Matrix4fStack;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,7 +37,7 @@ public class LegacyMultiTextureSkybox extends LegacyTexturedSkybox {
     }
 
     @Override
-    protected void renderTexturedSkybox(SkyboxRenderContext context, Matrix4fStack matrix4fStack, RenderPipeline pipeline, GpuBufferSlice dynamicTransforms) {
+    protected void renderTexturedSkybox(SkyboxRenderContext context, Matrix4f modelViewMatrix, RenderPipeline pipeline, GpuBufferSlice dynamicTransforms) {
         for (LegacyAnimation animation : this.animations) {
             animation.tick();
         }

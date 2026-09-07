@@ -12,7 +12,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Util;
 import org.joml.Matrix4f;
-import org.joml.Matrix4fStack;
 
 import java.util.List;
 import java.util.stream.Stream;
@@ -41,7 +40,7 @@ public class LegacyAnimatedSquareTexturedSkybox extends LegacyTexturedSkybox {
     }
 
     @Override
-    protected void renderTexturedSkybox(SkyboxRenderContext context, Matrix4fStack matrix4fStack, RenderPipeline pipeline, GpuBufferSlice dynamicTransforms) {
+    protected void renderTexturedSkybox(SkyboxRenderContext context, Matrix4f modelViewMatrix, RenderPipeline pipeline, GpuBufferSlice dynamicTransforms) {
         if (this.animationTextures.isEmpty()) {
             return;
         }
