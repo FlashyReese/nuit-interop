@@ -93,6 +93,7 @@ public class OptiFineCustomSky implements RenderableSkybox, SkyboxTextureProvide
 
         float sunAngleDegrees = camera.attributeProbe().getValue(EnvironmentAttributes.SUN_ANGLE, tickDelta);
         float sunAngle = sunAngleDegrees * Mth.DEG_TO_RAD;
+        float moonAngle = camera.attributeProbe().getValue(EnvironmentAttributes.MOON_ANGLE, tickDelta) * Mth.DEG_TO_RAD;
         float celestialAngle = Mth.positiveModulo(sunAngleDegrees / 360.0F, 1.0F);
         float rainLevel = 1.0F - level.getRainLevel(tickDelta);
         int sunriseOrSunsetColor = camera.attributeProbe().getValue(EnvironmentAttributes.SUNRISE_SUNSET_COLOR, tickDelta);
@@ -109,7 +110,7 @@ public class OptiFineCustomSky implements RenderableSkybox, SkyboxTextureProvide
         this.renderLayers(matrix4fStack, level, tickDelta, celestialAngle);
         matrix4fStack.popMatrix();
 
-        this.renderSunMoon(matrix4fStack, sunAngle, moonPhase, rainLevel);
+        this.renderSunMoon(matrix4fStack, sunAngle, moonAngle, moonPhase, rainLevel);
 
         if (minecraft.player != null && minecraft.player.getEyePosition(tickDelta).y - level.getLevelData().getHorizonHeight(level) < 0.0D) {
             context.renderDarkDisc();
@@ -140,7 +141,7 @@ public class OptiFineCustomSky implements RenderableSkybox, SkyboxTextureProvide
         }
     }
 
-    private void renderSunMoon(Matrix4fStack matrix4fStack, float sunAngle, MoonPhase moonPhase, float rainLevel) {
+    private void renderSunMoon(Matrix4fStack matrix4fStack, float sunAngle, float moonAngle, MoonPhase moonPhase, float rainLevel) {
         matrix4fStack.pushMatrix();
         try {
             matrix4fStack.rotate(Axis.YP.rotationDegrees(-90.0F));
@@ -155,7 +156,7 @@ public class OptiFineCustomSky implements RenderableSkybox, SkyboxTextureProvide
 
             matrix4fStack.pushMatrix();
             try {
-                matrix4fStack.rotate(Axis.XP.rotation(sunAngle + Mth.PI));
+                matrix4fStack.rotate(Axis.XP.rotation(moonAngle));
                 GpuBufferSlice dynamicTransforms = NuitRenderBackend.createDynamicTransforms(new Matrix4f(matrix4fStack), new Vector4f(1.0F, 1.0F, 1.0F, rainLevel));
                 LegacyFsbRenderer.drawCelestialQuad(LegacyFsbRenderer.celestialPipeline(), dynamicTransforms, DEFAULT_MOON_PHASES[moonPhase.index()], 20.0F, 100.0F, new UVRange(0.0F, 0.0F, 1.0F, 1.0F));
             } finally {
