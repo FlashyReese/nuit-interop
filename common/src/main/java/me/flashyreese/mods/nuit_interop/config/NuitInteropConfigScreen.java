@@ -50,7 +50,7 @@ public class NuitInteropConfigScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphicsExtractor, int mouseX, int mouseY, float delta) {
-        graphicsExtractor.centeredText(this.font, this.title, this.width / 2, 30, 0xFFFFFF);
+        graphicsExtractor.centeredText(this.font, this.title, this.width / 2, 30, 0xFFFFFFFF);
         super.extractRenderState(graphicsExtractor, mouseX, mouseY, delta);
     }
 

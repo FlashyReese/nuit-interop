@@ -61,8 +61,6 @@ jobs:
           version: '${{ github.event.release.tag_name }}+neoforge'
           version-type: release
 
-          game-versions: '26.2'
-
           loaders: neoforge
           environment: client
 

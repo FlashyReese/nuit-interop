@@ -82,7 +82,7 @@ public record LegacyRotation(boolean skyboxRotation, Vector3f staticRot, Vector3
 
     public void apply(PoseStack stack, ClientLevel level) {
         if (!this.mapping.isEmpty() || !this.axis.isEmpty()) {
-            stack.mulPose(this.calculateMappedRotation(level));
+            stack.rotate(this.calculateMappedRotation(level));
             return;
         }
 
@@ -90,18 +90,18 @@ public record LegacyRotation(boolean skyboxRotation, Vector3f staticRot, Vector3
         float timeRotationY = (float) LegacyUtils.calculateRotation(this.rotationSpeedY, this.timeShift.y, this.skyboxRotation, level);
         float timeRotationZ = (float) LegacyUtils.calculateRotation(this.rotationSpeedZ, this.timeShift.z, this.skyboxRotation, level);
 
-        stack.mulPose(Axis.XP.rotationDegrees(this.axisRot.x()));
-        stack.mulPose(Axis.YP.rotationDegrees(this.axisRot.y()));
-        stack.mulPose(Axis.ZP.rotationDegrees(this.axisRot.z()));
-        stack.mulPose(Axis.XP.rotationDegrees(timeRotationX));
-        stack.mulPose(Axis.YP.rotationDegrees(timeRotationY));
-        stack.mulPose(Axis.ZP.rotationDegrees(timeRotationZ));
-        stack.mulPose(Axis.ZP.rotationDegrees(-this.axisRot.z()));
-        stack.mulPose(Axis.YP.rotationDegrees(-this.axisRot.y()));
-        stack.mulPose(Axis.XP.rotationDegrees(-this.axisRot.x()));
-        stack.mulPose(Axis.XP.rotationDegrees(this.staticRot.x()));
-        stack.mulPose(Axis.YP.rotationDegrees(this.staticRot.y()));
-        stack.mulPose(Axis.ZP.rotationDegrees(this.staticRot.z()));
+        stack.rotateDegrees(Axis.XP, this.axisRot.x());
+        stack.rotateDegrees(Axis.YP, this.axisRot.y());
+        stack.rotateDegrees(Axis.ZP, this.axisRot.z());
+        stack.rotateDegrees(Axis.XP, timeRotationX);
+        stack.rotateDegrees(Axis.YP, timeRotationY);
+        stack.rotateDegrees(Axis.ZP, timeRotationZ);
+        stack.rotateDegrees(Axis.ZP, -this.axisRot.z());
+        stack.rotateDegrees(Axis.YP, -this.axisRot.y());
+        stack.rotateDegrees(Axis.XP, -this.axisRot.x());
+        stack.rotateDegrees(Axis.XP, this.staticRot.x());
+        stack.rotateDegrees(Axis.YP, this.staticRot.y());
+        stack.rotateDegrees(Axis.ZP, this.staticRot.z());
     }
 
     private Quaternionf calculateMappedRotation(ClientLevel level) {

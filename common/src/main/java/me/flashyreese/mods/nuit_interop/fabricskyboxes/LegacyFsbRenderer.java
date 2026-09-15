@@ -1,15 +1,15 @@
 package me.flashyreese.mods.nuit_interop.fabricskyboxes;
 
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
-import com.mojang.blaze3d.pipeline.BlendFunction;
-import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.textures.FilterMode;
-import com.mojang.blaze3d.textures.GpuSampler;
-import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.MeshData;
+import com.mojang.renderpearl.api.buffers.GpuBufferSlice;
+import com.mojang.renderpearl.api.pipeline.BlendFunction;
+import com.mojang.renderpearl.api.pipeline.RenderPipeline;
+import com.mojang.renderpearl.api.textures.FilterMode;
+import com.mojang.renderpearl.api.textures.GpuSampler;
+import com.mojang.renderpearl.api.textures.GpuTextureView;
 import me.flashyreese.mods.nuit.components.Blend;
 import me.flashyreese.mods.nuit.components.Texture;
 import me.flashyreese.mods.nuit.components.UVRange;
@@ -63,7 +63,7 @@ public final class LegacyFsbRenderer {
             throw throwable;
         }
 
-        NuitRenderBackend.draw(pipeline, meshData, dynamicTransforms, pass -> pass.bindTexture("Sampler0", textureView, sampler));
+        NuitRenderBackend.draw(pipeline, meshData, dynamicTransforms, pass -> pass.setUniform("Sampler0", textureView, sampler));
     }
 
     static void drawTexturedQuad(RenderPipeline pipeline, GpuBufferSlice dynamicTransforms, Matrix4f matrix4f, Texture texture) {

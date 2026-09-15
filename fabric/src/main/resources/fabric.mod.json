@@ -42,7 +42,7 @@
   ],
   "depends": {
     "fabricloader": ">=0.19.3",
-    "minecraft": "~26.2.0",
+    "minecraft": "~26.3-rc.3",
     "java": ">=25",
     "fabric-api": "*",
     "nuit": "${nuit_version}"

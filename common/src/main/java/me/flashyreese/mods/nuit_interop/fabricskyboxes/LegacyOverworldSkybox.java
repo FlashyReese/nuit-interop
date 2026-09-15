@@ -1,10 +1,10 @@
 package me.flashyreese.mods.nuit_interop.fabricskyboxes;
 
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
-import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.math.Axis;
+import com.mojang.renderpearl.api.buffers.GpuBufferSlice;
+import com.mojang.renderpearl.api.pipeline.RenderPipeline;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import me.flashyreese.mods.nuit.api.skyboxes.SkyboxRenderContext;
@@ -12,10 +12,12 @@ import me.flashyreese.mods.nuit.render.NuitRenderBackend;
 import net.minecraft.client.Camera;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.util.ARGB;
 import net.minecraft.util.Mth;
 import net.minecraft.world.attribute.EnvironmentAttributes;
-import org.joml.Matrix4f;
-import org.joml.Vector4f;
+import org.joml.*;
+
+import java.lang.Math;
 
 public class LegacyOverworldSkybox extends LegacyAbstractSkybox {
     public static final Codec<LegacyOverworldSkybox> CODEC = RecordCodecBuilder.create(instance -> instance.group(
@@ -36,12 +38,11 @@ public class LegacyOverworldSkybox extends LegacyAbstractSkybox {
         float tickDelta = context.tickDelta();
         ClientLevel level = (ClientLevel) camera.entity().level();
         float sunAngle = camera.attributeProbe().getValue(EnvironmentAttributes.SUN_ANGLE, tickDelta) * Mth.DEG_TO_RAD;
-        int sunriseOrSunsetColor = camera.attributeProbe().getValue(EnvironmentAttributes.SUNRISE_SUNSET_COLOR, tickDelta);
-        int skyColor = camera.attributeProbe().getValue(EnvironmentAttributes.SKY_COLOR, tickDelta);
+        Vector4fc sunriseOrSunsetColor = camera.attributeProbe().getValue(EnvironmentAttributes.SUNRISE_SUNSET_COLOR, tickDelta);
+        Vector3fc skyColor = camera.attributeProbe().getValue(EnvironmentAttributes.SKY_COLOR, tickDelta);
 
-        int alphaColor = (skyColor & 0x00FFFFFF) | ((int) (this.alpha * 255.0F) << 24);
-        context.renderSkyDisc(alphaColor);
-        if (((sunriseOrSunsetColor >>> 24) & 0xFF) > 0) {
+        context.renderSkyDisc(new Vector4f(skyColor, this.alpha));
+        if (sunriseOrSunsetColor.w() > 0F) {
             this.renderSunriseAndSunset(modelViewMatrix, sunAngle, sunriseOrSunsetColor);
         }
 
@@ -53,7 +54,7 @@ public class LegacyOverworldSkybox extends LegacyAbstractSkybox {
         }
     }
 
-    private void renderSunriseAndSunset(Matrix4f modelViewMatrix, float sunAngle, int sunriseOrSunsetColor) {
+    private void renderSunriseAndSunset(Matrix4f modelViewMatrix, float sunAngle, Vector4fc sunriseOrSunsetColor) {
         float zRotation = Mth.sin(sunAngle) < 0.0F ? 180.0F : 0.0F;
         Matrix4f sunriseModelViewMatrix = new Matrix4f(modelViewMatrix)
                 .rotate(Axis.XP.rotationDegrees(90.0F))
@@ -62,15 +63,15 @@ public class LegacyOverworldSkybox extends LegacyAbstractSkybox {
         RenderPipeline pipeline = RenderPipelines.SUNRISE_SUNSET;
         try (ByteBufferBuilder byteBufferBuilder = LegacyFsbRenderer.byteBufferBuilder(pipeline, 18)) {
             BufferBuilder bufferBuilder = LegacyFsbRenderer.bufferBuilder(byteBufferBuilder, pipeline);
-            int alpha = (int) (((sunriseOrSunsetColor >>> 24) & 0xFF) * this.alpha);
-            int color = (sunriseOrSunsetColor & 0x00FFFFFF) | (alpha << 24);
+            float alpha = sunriseOrSunsetColor.w() * this.alpha;
+            int color = ARGB.color(alpha, ARGB.colorFromVector4f(sunriseOrSunsetColor));
             int transparentColor = color & 0x00FFFFFF;
             bufferBuilder.addVertex(0.0F, 100.0F, 0.0F).setColor(color);
             for (int i = 0; i <= 16; i++) {
                 float angleRadians = (float) i * ((float) Math.PI * 2.0F) / 16.0F;
                 float x = Mth.sin(angleRadians);
                 float y = Mth.cos(angleRadians);
-                float z = -y * 40.0F * (alpha / 255.0F);
+                float z = -y * 40.0F * alpha;
                 bufferBuilder.addVertex(x * 120.0F, y * 120.0F, z).setColor(transparentColor);
             }
             GpuBufferSlice dynamicTransforms = NuitRenderBackend.createDynamicTransforms(sunriseModelViewMatrix, new Vector4f(1.0F, 1.0F, 1.0F, 1.0F));

@@ -1,8 +1,8 @@
 package me.flashyreese.mods.nuit_interop.sky;
 
 import com.google.common.collect.ImmutableMap;
-import com.mojang.blaze3d.pipeline.BlendFunction;
-import com.mojang.blaze3d.platform.BlendFactor;
+import com.mojang.renderpearl.api.pipeline.BlendFactor;
+import com.mojang.renderpearl.api.pipeline.BlendFunction;
 import com.mojang.serialization.Codec;
 import org.joml.Vector4f;
 

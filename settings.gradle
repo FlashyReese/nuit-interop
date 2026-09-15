@@ -11,4 +11,4 @@ rootProject.name = 'nuit-interop'
 
 include 'common'
 include 'fabric'
-include 'neoforge'
+//include 'neoforge'

@@ -1,11 +1,11 @@
 package me.flashyreese.mods.nuit_interop.sky;
 
 import com.google.common.collect.ImmutableList;
-import com.mojang.blaze3d.buffers.GpuBufferSlice;
-import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.math.Axis;
+import com.mojang.renderpearl.api.buffers.GpuBufferSlice;
+import com.mojang.renderpearl.api.pipeline.RenderPipeline;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import me.flashyreese.mods.nuit.api.skyboxes.RenderableSkybox;
@@ -22,14 +22,13 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.util.ARGB;
 import net.minecraft.util.Mth;
 import net.minecraft.world.attribute.EnvironmentAttributes;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.MoonPhase;
 import net.minecraft.world.level.dimension.DimensionType;
-import org.joml.Matrix4f;
-import org.joml.Matrix4fStack;
-import org.joml.Vector4f;
+import org.joml.*;
 
 import java.util.List;
 import java.util.stream.Stream;
@@ -96,12 +95,12 @@ public class OptiFineCustomSky implements RenderableSkybox, SkyboxTextureProvide
         float moonAngle = camera.attributeProbe().getValue(EnvironmentAttributes.MOON_ANGLE, tickDelta) * Mth.DEG_TO_RAD;
         float celestialAngle = Mth.positiveModulo(sunAngleDegrees / 360.0F, 1.0F);
         float rainLevel = 1.0F - level.getRainLevel(tickDelta);
-        int sunriseOrSunsetColor = camera.attributeProbe().getValue(EnvironmentAttributes.SUNRISE_SUNSET_COLOR, tickDelta);
+        Vector4fc sunriseOrSunsetColor = camera.attributeProbe().getValue(EnvironmentAttributes.SUNRISE_SUNSET_COLOR, tickDelta);
         MoonPhase moonPhase = camera.attributeProbe().getValue(EnvironmentAttributes.MOON_PHASE, tickDelta);
-        int skyColor = camera.attributeProbe().getValue(EnvironmentAttributes.SKY_COLOR, tickDelta);
+        Vector3fc skyColor = camera.attributeProbe().getValue(EnvironmentAttributes.SKY_COLOR, tickDelta);
 
         context.renderSkyDisc(skyColor);
-        if (((sunriseOrSunsetColor >>> 24) & 0xFF) > 0) {
+        if (sunriseOrSunsetColor.w() > 0F) {
             this.renderSunriseAndSunset(matrix4fStack, sunAngle, sunriseOrSunsetColor);
         }
 
@@ -117,7 +116,7 @@ public class OptiFineCustomSky implements RenderableSkybox, SkyboxTextureProvide
         }
     }
 
-    private void renderSunriseAndSunset(Matrix4f modelViewMatrix, float sunAngle, int sunriseOrSunsetColor) {
+    private void renderSunriseAndSunset(Matrix4f modelViewMatrix, float sunAngle, Vector4fc sunriseOrSunsetColor) {
         float zRotation = Mth.sin(sunAngle) < 0.0F ? 180.0F : 0.0F;
         Matrix4f sunriseModelViewMatrix = new Matrix4f(modelViewMatrix)
                 .rotate(Axis.XP.rotationDegrees(90.0F))
@@ -125,15 +124,16 @@ public class OptiFineCustomSky implements RenderableSkybox, SkyboxTextureProvide
 
         RenderPipeline pipeline = RenderPipelines.SUNRISE_SUNSET;
         try (ByteBufferBuilder byteBufferBuilder = LegacyFsbRenderer.byteBufferBuilder(pipeline, 18)) {
+            int color = ARGB.colorFromVector4f(sunriseOrSunsetColor);
+            int transparentColor = color & 0x00FFFFFF;
+
             BufferBuilder bufferBuilder = LegacyFsbRenderer.bufferBuilder(byteBufferBuilder, pipeline);
-            bufferBuilder.addVertex(0.0F, 100.0F, 0.0F).setColor(sunriseOrSunsetColor);
-            int transparentColor = sunriseOrSunsetColor & 0x00FFFFFF;
-            float alpha = ((sunriseOrSunsetColor >>> 24) & 0xFF) / 255.0F;
+            bufferBuilder.addVertex(0.0F, 100.0F, 0.0F).setColor(color);
             for (int i = 0; i <= 16; i++) {
                 float angleRadians = (float) i * Mth.TWO_PI / 16.0F;
                 float x = Mth.sin(angleRadians);
                 float y = Mth.cos(angleRadians);
-                float z = -y * 40.0F * alpha;
+                float z = -y * 40.0F * sunriseOrSunsetColor.w();
                 bufferBuilder.addVertex(x * 120.0F, y * 120.0F, z).setColor(transparentColor);
             }
             GpuBufferSlice dynamicTransforms = NuitRenderBackend.createDynamicTransforms(sunriseModelViewMatrix, new Vector4f(1.0F, 1.0F, 1.0F, 1.0F));
