@@ -1,5 +1,5 @@
 modLoader = "javafml"
-loaderVersion = "[2,)"
+loaderVersion = "[3,)"
 #issueTrackerURL = ""
 license = "MIT"
 
@@ -11,19 +11,19 @@ authors = "FlashyReese"
 description = '''
 Nuit Interoperability for MCPatcher/OptiFine/FabricSkyBoxes Skies
 '''
-logoFile = "assets/nuit_interop/icon.png"
+iconFile = "assets/nuit_interop/icon.png"
 
 [[dependencies.nuit_interop]]
 modId = "neoforge"
 type = "required"
-versionRange = "[26.2.0,26.3.0)"
+versionRange = "[26.3.0,26.4.0)"
 ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.nuit_interop]]
 modId = "minecraft"
 type = "required"
-versionRange = "[26.2.0,26.3.0)"
+versionRange = "[26.3.0,26.4.0)"
 ordering = "NONE"
 side = "BOTH"
 
